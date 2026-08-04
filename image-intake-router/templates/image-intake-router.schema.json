@@ -1,0 +1,480 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.openclaw.invalid/schemas/image-intake-router.v2.json",
+  "title": "Image Intake Router v2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "preview_state",
+    "source",
+    "facts",
+    "expense_projection",
+    "diet_projection",
+    "quality"
+  ],
+  "properties": {
+    "schema_version": { "const": "image-intake-router.v2" },
+    "preview_state": { "enum": ["draft", "awaiting_confirmation", "executing", "consumed"] },
+    "source": { "$ref": "#/$defs/source" },
+    "facts": { "$ref": "#/$defs/facts" },
+    "expense_projection": {
+      "oneOf": [
+        { "$ref": "#/$defs/expenseProjection" },
+        { "type": "null" }
+      ]
+    },
+    "diet_projection": {
+      "oneOf": [
+        { "$ref": "#/$defs/dietProjection" },
+        { "type": "null" }
+      ]
+    },
+    "quality": { "$ref": "#/$defs/quality" }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "quality": {
+            "properties": {
+              "fact_set_status": { "const": "complete" }
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "facts": {
+            "properties": {
+              "unresolved_issues": { "maxItems": 0 }
+            }
+          },
+          "quality": {
+            "properties": {
+              "issues": { "maxItems": 0 }
+            }
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["image_count", "has_user_text"],
+      "properties": {
+        "image_count": { "type": "integer", "minimum": 1 },
+        "has_user_text": { "type": "boolean" }
+      }
+    },
+    "evidenceRecord": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source", "value"],
+      "properties": {
+        "source": {
+          "enum": [
+            "visible_label",
+            "user_text",
+            "calculated",
+            "reference_database",
+            "visual_estimate"
+          ]
+        },
+        "value": { "type": "string", "minLength": 1, "maxLength": 1000 },
+        "location": { "type": "string", "minLength": 1, "maxLength": 240 },
+        "reason": { "type": "string", "minLength": 1, "maxLength": 500 }
+      }
+    },
+    "textFact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["value", "evidence"],
+      "properties": {
+        "value": { "type": ["string", "null"], "maxLength": 1000 },
+        "evidence": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/evidenceRecord" },
+          "maxItems": 20
+        }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "value": { "type": "string" } } },
+          "then": { "properties": { "evidence": { "minItems": 1 } } }
+        }
+      ]
+    },
+    "amountFact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["value", "evidence"],
+      "properties": {
+        "value": { "type": ["number", "null"], "exclusiveMinimum": 0 },
+        "currency": { "type": ["string", "null"], "pattern": "^[A-Z]{3}$" },
+        "evidence": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/evidenceRecord" },
+          "maxItems": 20
+        }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "value": { "type": "number" } } },
+          "then": { "properties": { "evidence": { "minItems": 1 } } }
+        }
+      ]
+    },
+    "quantityFact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["value", "unit", "evidence"],
+      "properties": {
+        "value": { "type": ["number", "null"], "exclusiveMinimum": 0 },
+        "unit": { "type": ["string", "null"], "maxLength": 40 },
+        "evidence": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/evidenceRecord" },
+          "maxItems": 20
+        }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "value": { "type": "number" } } },
+          "then": { "properties": { "evidence": { "minItems": 1 } } }
+        }
+      ]
+    },
+    "orderFacts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "merchant",
+        "transaction_time",
+        "final_paid_amount",
+        "order_status",
+        "auxiliary_amounts"
+      ],
+      "properties": {
+        "merchant": { "$ref": "#/$defs/textFact" },
+        "transaction_time": { "$ref": "#/$defs/textFact" },
+        "final_paid_amount": { "$ref": "#/$defs/amountFact" },
+        "order_status": { "$ref": "#/$defs/textFact" },
+        "auxiliary_amounts": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/auxiliaryAmount" },
+          "maxItems": 30
+        }
+      }
+    },
+    "auxiliaryAmount": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "amount"],
+      "properties": {
+        "kind": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "amount": { "$ref": "#/$defs/amountFact" }
+      }
+    },
+    "itemFact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "item_name",
+        "quantity",
+        "specification",
+        "line_status",
+        "item_type",
+        "evidence"
+      ],
+      "properties": {
+        "item_name": { "$ref": "#/$defs/textFact" },
+        "quantity": { "$ref": "#/$defs/quantityFact" },
+        "specification": { "$ref": "#/$defs/textFact" },
+        "line_status": { "$ref": "#/$defs/textFact" },
+        "item_type": {
+          "enum": [
+            "food",
+            "non_food",
+            "fee",
+            "service",
+            "discount",
+            "advertising",
+            "recommendation",
+            "unknown"
+          ]
+        },
+        "evidence": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/evidenceRecord" },
+          "minItems": 1,
+          "maxItems": 20
+        }
+      }
+    },
+    "facts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["order", "items", "unresolved_issues"],
+      "properties": {
+        "order": { "$ref": "#/$defs/orderFacts" },
+        "items": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/itemFact" },
+          "maxItems": 100
+        },
+        "unresolved_issues": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1, "maxLength": 500 },
+          "maxItems": 50
+        }
+      }
+    },
+    "expenseProjection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "executable",
+        "amount",
+        "category_id",
+        "occurred_at",
+        "source_kind",
+        "merchant",
+        "note",
+        "issues"
+      ],
+      "properties": {
+        "executable": { "type": "boolean" },
+        "amount": { "type": ["number", "null"], "exclusiveMinimum": 0, "maximum": 9999999999.99 },
+        "category_id": { "type": ["string", "null"], "minLength": 1, "maxLength": 80 },
+        "occurred_at": {
+          "type": ["string", "null"],
+          "minLength": 20,
+          "maxLength": 40,
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(?:\\.[0-9]+)?(?:Z|[+-][0-9]{2}:[0-9]{2})$"
+        },
+        "source_kind": { "const": "image" },
+        "merchant": { "type": ["string", "null"], "minLength": 1, "maxLength": 120 },
+        "note": { "type": ["string", "null"], "minLength": 1, "maxLength": 1000 },
+        "issues": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1, "maxLength": 500 },
+          "maxItems": 50
+        }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "executable": { "const": false } } },
+          "then": {
+            "properties": {
+              "amount": { "type": "null" },
+              "category_id": { "type": "null" },
+              "occurred_at": { "type": "null" },
+              "merchant": { "type": "null" },
+              "note": { "type": "null" },
+              "issues": { "minItems": 1 }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "executable": { "const": true } } },
+          "then": {
+            "properties": {
+              "amount": { "type": "number", "exclusiveMinimum": 0, "maximum": 9999999999.99 },
+              "category_id": { "type": "string", "minLength": 1, "maxLength": 80 },
+              "occurred_at": {
+                "type": "string",
+                "minLength": 20,
+                "maxLength": 40,
+                "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(?:\\.[0-9]+)?(?:Z|[+-][0-9]{2}:[0-9]{2})$"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "labelNutrition": {
+      "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
+      "properties": {
+        "energy_kj": { "type": ["number", "null"], "minimum": 0 },
+        "calories_kcal": { "type": ["number", "null"], "minimum": 0 },
+        "protein_g": { "type": ["number", "null"], "minimum": 0 },
+        "fat_g": { "type": ["number", "null"], "minimum": 0 },
+        "carbohydrate_g": { "type": ["number", "null"], "minimum": 0 },
+        "sodium_mg": { "type": ["number", "null"], "minimum": 0 },
+        "fiber_g": { "type": ["number", "null"], "minimum": 0 },
+        "sugar_g": { "type": ["number", "null"], "minimum": 0 },
+        "saturated_fat_g": { "type": ["number", "null"], "minimum": 0 },
+        "hydration_ml": { "type": ["number", "null"], "minimum": 0 }
+      }
+    },
+    "nutritionProfile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["normalized_name", "serving_basis", "nutrition", "source_text", "source_grade"],
+      "properties": {
+        "normalized_name": { "type": "string", "minLength": 1 },
+        "brand": { "type": "string", "minLength": 1 },
+        "product_key": { "type": "string", "minLength": 1 },
+        "serving_basis": { "enum": ["per_100g", "per_100ml", "per_serving"] },
+        "nutrition": { "$ref": "#/$defs/labelNutrition" },
+        "source_text": { "type": "string", "minLength": 1, "maxLength": 1000 },
+        "source_grade": { "enum": ["A", "B", "C", "D", "unknown"] }
+      }
+    },
+    "packageHierarchyItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["unit"],
+      "properties": {
+        "quantity": { "type": "number", "exclusiveMinimum": 0 },
+        "per_parent": { "type": "number", "exclusiveMinimum": 0 },
+        "unit": { "type": "string", "minLength": 1, "maxLength": 40 }
+      },
+      "anyOf": [
+        { "required": ["quantity"] },
+        { "required": ["per_parent"] }
+      ]
+    },
+    "pantryAddItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["action", "food_name", "quantity", "unit", "source_text"],
+      "properties": {
+        "action": { "const": "add" },
+        "food_name": { "type": "string", "minLength": 1 },
+        "normalized_name": { "type": "string", "minLength": 1 },
+        "quantity": { "type": "number", "exclusiveMinimum": 0 },
+        "unit": {
+          "enum": [
+            "g", "gram", "grams", "ml", "milliliter", "milliliters",
+            "piece", "pieces", "portion", "portions", "pack", "packs"
+          ]
+        },
+        "package_count": { "type": "number", "exclusiveMinimum": 0 },
+        "quantity_per_package": { "type": "number", "exclusiveMinimum": 0 },
+        "package_unit": { "enum": ["g", "ml"] },
+        "display_quantity": { "type": "number", "exclusiveMinimum": 0 },
+        "display_unit": { "type": "string", "minLength": 1, "maxLength": 40 },
+        "base_quantity_per_display_unit": { "type": "number", "exclusiveMinimum": 0 },
+        "package_hierarchy": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/packageHierarchyItem" },
+          "minItems": 1,
+          "maxItems": 4
+        },
+        "source_text": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 240,
+          "pattern": "^[^\\r\\n]+$"
+        },
+        "expiry_date": { "type": "string", "format": "date", "maxLength": 16384 },
+        "expires_at": { "type": ["string", "null"], "maxLength": 16384 },
+        "nutrition_profile": { "$ref": "#/$defs/nutritionProfile" }
+      },
+      "dependentRequired": {
+        "display_quantity": ["display_unit", "base_quantity_per_display_unit"],
+        "display_unit": ["display_quantity", "base_quantity_per_display_unit"],
+        "base_quantity_per_display_unit": ["display_quantity", "display_unit"],
+        "package_count": ["quantity_per_package", "package_unit"],
+        "quantity_per_package": ["package_count", "package_unit"],
+        "package_unit": ["package_count", "quantity_per_package"]
+      },
+      "oneOf": [
+        { "required": ["expiry_date"], "not": { "required": ["expires_at"] } },
+        { "required": ["expires_at"], "not": { "required": ["expiry_date"] } }
+      ]
+    },
+    "excludedItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["item_name", "status", "reason", "evidence"],
+      "properties": {
+        "item_name": { "type": "string", "minLength": 1, "maxLength": 240 },
+        "status": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "reason": { "type": "string", "minLength": 1, "maxLength": 500 },
+        "evidence": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/evidenceRecord" },
+          "maxItems": 20
+        }
+      }
+    },
+    "uncertainItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["item_name", "status", "reason", "evidence"],
+      "properties": {
+        "item_name": { "type": "string", "minLength": 1, "maxLength": 240 },
+        "status": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "reason": { "type": "string", "minLength": 1, "maxLength": 500 },
+        "evidence": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/evidenceRecord" },
+          "maxItems": 20
+        }
+      }
+    },
+    "itemAudit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["item_index", "order_status", "evidence"],
+      "properties": {
+        "item_index": { "type": "integer", "minimum": 0 },
+        "order_status": { "enum": ["purchased_and_received"] },
+        "evidence": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/evidenceRecord" },
+          "minItems": 1,
+          "maxItems": 20
+        }
+      }
+    },
+    "dietProjection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["items", "item_audit", "excluded_items", "uncertain_items"],
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/pantryAddItem" },
+          "maxItems": 100
+        },
+        "item_audit": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/itemAudit" },
+          "maxItems": 100
+        },
+        "excluded_items": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/excludedItem" },
+          "maxItems": 100
+        },
+        "uncertain_items": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/uncertainItem" },
+          "maxItems": 100
+        }
+      }
+    },
+    "quality": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["visual_capability", "fact_set_status", "issues"],
+      "properties": {
+        "visual_capability": { "enum": ["available", "unavailable"] },
+        "fact_set_status": { "enum": ["complete", "partial", "unavailable"] },
+        "issues": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1, "maxLength": 500 },
+          "maxItems": 50
+        }
+      }
+    }
+  }
+}
