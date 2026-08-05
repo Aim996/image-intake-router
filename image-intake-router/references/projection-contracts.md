@@ -28,7 +28,7 @@
 必须是 20 到 40 个字符的带时区 ISO 8601 时间；这两个边界在基础投影和可执行分支都必须
 保持一致。
 
-`expense_projection` 是路由器预览对象，不等于下游公开账本写入 payload。执行 `expense_entry(action="create")` 时，公开参数仍只有 `amount`、`category_id`、`occurred_at`、恒定的 `source_kind: "image"`，以及非空时的 `merchant` 和 `note`。绝不把 `executable`、`detail_completeness`、`omitted_item_count` 或 `issues` 作为账本参数；`line_items` 同样是路由器的 v0.3 结构化预览数据，不是账本参数。
+`expense_projection` 同时包含路由器预览状态和下游公开账本写入 payload。执行 `expense_entry(action="create")` 时，公开参数保留 `amount`、`category_id`、`occurred_at`、恒定的 `source_kind: "image"`，以及非空时的 `merchant` 和 `note`；在协调的 v2.1 与 personal-expense-ledger v0.3 执行中，存在的 `line_items` 也是可选结构化公开参数，必须原样转发，绝不静默丢弃或缩减为 `note`。`executable`、`detail_completeness`、`omitted_item_count` 和 `issues` 是路由器内部元数据，绝不作为账本参数；若已安装账本未声明 `line_items`，必须标记兼容性不满足为不可执行/错误，而不是删除明细或调用旧 payload。
 
 一张票据或一笔订单只产生一笔费用投影，绝不按商品拆账。若存在可识别的实际购买商品，
 `note` 是面向人的简短摘要，在长度允许时列出商品名称（包括非食品），但从不作为完整单品清单或价目表。只有带唯一、直接的
