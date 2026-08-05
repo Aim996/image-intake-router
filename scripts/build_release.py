@@ -57,6 +57,7 @@ def build_release(
     if requested_version is not None and requested_version != version:
         raise ValueError(f"requested version {requested_version} does not match VERSION {version}")
 
+    members = runtime_members(root)
     output_dir.mkdir(parents=True, exist_ok=True)
     archive = output_dir / f"{PROJECT_NAME}-{version}.tgz"
     checksum = output_dir / f"{archive.name}.sha256"
@@ -65,7 +66,7 @@ def build_release(
     with archive.open("wb") as raw:
         with gzip.GzipFile(fileobj=raw, mode="wb", filename="", mtime=0) as gzip_file:
             with tarfile.open(fileobj=gzip_file, mode="w") as tar:
-                for relative in runtime_members(root):
+                for relative in members:
                     data = (root / relative).read_bytes()
                     info = tarfile.TarInfo(f"{prefix}/{relative.as_posix()}")
                     info.size = len(data)
