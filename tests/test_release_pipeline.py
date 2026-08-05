@@ -8,6 +8,7 @@ import unittest
 from pathlib import Path
 
 from scripts.build_release import build_release, read_version, runtime_members
+from scripts.verify_release import verify_release
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -98,3 +99,34 @@ class ReleaseBuildTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             with self.assertRaisesRegex(ValueError, "does not match VERSION"):
                 build_release(ROOT, Path(directory), requested_version="2.0.1")
+
+    def test_verified_archive_installs_without_source_tree(self) -> None:
+        with tempfile.TemporaryDirectory() as output, tempfile.TemporaryDirectory() as install:
+            archive, checksum = build_release(ROOT, Path(output))
+            report = verify_release(archive, checksum, Path(install))
+            self.assertEqual(report.version, "2.0.0")
+            self.assertTrue((report.installed_skill / "SKILL.md").is_file())
+            self.assertTrue(
+                (report.installed_skill / "templates/image-intake-router.schema.json").is_file()
+            )
+
+    def test_checksum_mismatch_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as output, tempfile.TemporaryDirectory() as install:
+            archive, checksum = build_release(ROOT, Path(output))
+            checksum.write_text("0" * 64 + f"  {archive.name}\n", encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "checksum mismatch"):
+                verify_release(archive, checksum, Path(install))
+
+    def test_path_traversal_member_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as output, tempfile.TemporaryDirectory() as install:
+            archive = Path(output) / "image-intake-router-2.0.0.tgz"
+            payload = b"escape"
+            with tarfile.open(archive, "w:gz") as tar:
+                info = tarfile.TarInfo("image-intake-router-2.0.0/../escape.txt")
+                info.size = len(payload)
+                tar.addfile(info, io.BytesIO(payload))
+            digest = hashlib.sha256(archive.read_bytes()).hexdigest()
+            checksum = Path(output) / f"{archive.name}.sha256"
+            checksum.write_text(f"{digest}  {archive.name}\n", encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "unsafe archive member"):
+                verify_release(archive, checksum, Path(install))
