@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - codex/**
+  pull_request:
+
+jobs:
+  test-and-verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run repository contracts
+        run: python -m unittest tests.test_repository_contract -v
+      - name: Run Skill static contracts
+        run: python image-intake-router/tests/test_static_contract.py -v
+      - name: Parse schema
+        run: python -m json.tool image-intake-router/templates/image-intake-router.schema.json
+      - name: Run release pipeline tests
+        run: python -m unittest tests.test_release_pipeline -v
+      - name: Build release assets
+        shell: bash
+        run: |
+          VERSION="$(tr -d '\r\n' < VERSION)"
+          python -m scripts.build_release --root . --output-dir dist --version "$VERSION"
+      - name: Verify release assets
+        shell: bash
+        run: |
+          VERSION="$(tr -d '\r\n' < VERSION)"
+          python -m scripts.verify_release \
+            --archive "dist/image-intake-router-$VERSION.tgz" \
+            --checksum "dist/image-intake-router-$VERSION.tgz.sha256" \
+            --install-root build/smoke

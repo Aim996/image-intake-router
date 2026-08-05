@@ -52,3 +52,26 @@ class RepositoryContractTests(unittest.TestCase):
         project_doc = self.read("项目说明.md")
         self.assertNotRegex(project_doc, r"[A-Za-z]:\\")
         self.assertNotIn("暂存副本", project_doc)
+
+    def test_ci_and_release_workflows_gate_publication(self) -> None:
+        ci = self.read(".github/workflows/ci.yml")
+        release = self.read(".github/workflows/release.yml")
+        required_commands = [
+            "tests.test_repository_contract",
+            "image-intake-router/tests/test_static_contract.py",
+            "tests.test_release_pipeline",
+            "scripts.build_release",
+            "scripts.verify_release",
+        ]
+        for workflow in [ci, release]:
+            for command in required_commands:
+                self.assertIn(command, workflow)
+        self.assertIn("tags:", release)
+        self.assertIn("'v*'", release)
+        self.assertIn("contents: write", release)
+        self.assertIn("gh release create", release)
+        self.assertIn("RELEASE_NOTES.md", release)
+        self.assertIn("dist/*.tgz", release)
+        self.assertIn("dist/*.sha256", release)
+        self.assertNotIn("continue-on-error: true", release)
+        self.assertIn("pull_request:", ci)

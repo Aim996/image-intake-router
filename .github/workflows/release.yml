@@ -1,0 +1,49 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Validate tag version and run publication gates
+        shell: bash
+        run: |
+          VERSION_FROM_TAG="${GITHUB_REF_NAME#v}"
+          if ! printf '%s\n' "$VERSION_FROM_TAG" | cmp -s - VERSION; then
+            echo "Tag version does not match VERSION" >&2
+            exit 1
+          fi
+          python -m unittest tests.test_repository_contract -v
+          python image-intake-router/tests/test_static_contract.py -v
+          python -m json.tool image-intake-router/templates/image-intake-router.schema.json
+          python -m unittest tests.test_release_pipeline -v
+          python -m scripts.build_release --root . --output-dir dist --version "$VERSION_FROM_TAG"
+          python -m scripts.verify_release \
+            --archive "dist/image-intake-router-$VERSION_FROM_TAG.tgz" \
+            --checksum "dist/image-intake-router-$VERSION_FROM_TAG.tgz.sha256" \
+            --install-root build/smoke
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            echo "Release already exists: $GITHUB_REF_NAME" >&2
+            exit 1
+          fi
+          VERSION_FROM_TAG="${GITHUB_REF_NAME#v}"
+          gh release create "$GITHUB_REF_NAME" \
+            dist/*.tgz dist/*.sha256 \
+            --title "image-intake-router $VERSION_FROM_TAG" \
+            --notes-file RELEASE_NOTES.md
