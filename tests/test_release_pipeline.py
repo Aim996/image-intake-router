@@ -173,6 +173,54 @@ class ReleaseBuildTests(unittest.TestCase):
             self.assertEqual(archive.read_bytes(), original_archive)
             self.assertEqual(checksum.read_text(encoding="utf-8"), original_checksum)
 
+    def test_symlinked_release_source_does_not_overwrite_existing_assets(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            temporary = Path(directory)
+            fixture_root = temporary / "fixture"
+            _write_release_root(fixture_root, "\n")
+            output_dir = temporary / "output"
+            output_dir.mkdir()
+            archive = output_dir / "image-intake-router-2.0.0.tgz"
+            checksum = output_dir / f"{archive.name}.sha256"
+            original_archive = b"existing archive"
+            original_checksum = "existing checksum\n"
+            archive.write_bytes(original_archive)
+            checksum.write_text(original_checksum, encoding="utf-8", newline="\n")
+
+            outside_file = temporary / "outside-readme.md"
+            outside_file.write_text("outside content\n", encoding="utf-8", newline="\n")
+            readme = fixture_root / "README.md"
+            readme.unlink()
+            try:
+                readme.symlink_to(outside_file)
+            except OSError as error:
+                self.skipTest(f"OS cannot create test symlink: {error}")
+
+            with self.subTest(source="README.md"):
+                with self.assertRaisesRegex(ValueError, "unsafe release source: README.md"):
+                    build_release(fixture_root, output_dir)
+                self.assertEqual(archive.read_bytes(), original_archive)
+                self.assertEqual(checksum.read_text(encoding="utf-8"), original_checksum)
+
+            outside_docs = temporary / "outside-docs"
+            outside_docs.mkdir()
+            for name in ("AI-PROMPTS.md", "INSTALL.md", "UPGRADING.md"):
+                (outside_docs / name).write_text("outside content\n", encoding="utf-8", newline="\n")
+            docs = fixture_root / "docs"
+            shutil.rmtree(docs)
+            try:
+                docs.symlink_to(outside_docs, target_is_directory=True)
+            except OSError as error:
+                self.skipTest(f"OS cannot create test symlink: {error}")
+
+            with self.subTest(source="docs/AI-PROMPTS.md"):
+                with self.assertRaisesRegex(
+                    ValueError, "unsafe release source: docs/AI-PROMPTS.md"
+                ):
+                    build_release(fixture_root, output_dir)
+                self.assertEqual(archive.read_bytes(), original_archive)
+                self.assertEqual(checksum.read_text(encoding="utf-8"), original_checksum)
+
     def test_missing_allowlist_file_does_not_overwrite_existing_release_assets(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             fixture_root = Path(directory) / "fixture"
