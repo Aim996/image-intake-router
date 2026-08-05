@@ -560,19 +560,65 @@ def _safe_extract(
         target.write_bytes(source.read())
 
 
+def _frontmatter_values(skill_text: str) -> dict[tuple[str, ...], str]:
+    match = re.match(r"\A---\r?\n(.*?)\r?\n---(?:\r?\n|\Z)", skill_text, re.DOTALL)
+    if match is None:
+        raise ValueError("invalid SKILL.md frontmatter")
+    values: dict[tuple[str, ...], str] = {}
+    stack: list[tuple[int, str]] = []
+    for line in match.group(1).splitlines():
+        if not line.strip() or line.lstrip().startswith("#"):
+            continue
+        indent = len(line) - len(line.lstrip(" "))
+        key, separator, value = line.lstrip(" ").partition(":")
+        if not separator or not key:
+            raise ValueError("invalid SKILL.md frontmatter")
+        while stack and indent <= stack[-1][0]:
+            stack.pop()
+        stack.append((indent, key))
+        values[tuple(name for _, name in stack)] = value.strip()
+    return values
+
+
+def _expected_references() -> set[str]:
+    return {
+        path.relative_to(PROJECT_NAME).as_posix()
+        for path in release_members()
+        if path.parts[:2] == (PROJECT_NAME, "references")
+    }
+
+
+def _installed_regular_file(installed_skill: Path, relative: str) -> Path:
+    relative_path = PurePosixPath(relative)
+    if relative_path.is_absolute() or ".." in relative_path.parts or not relative_path.parts:
+        raise ValueError(f"unsafe installed reference: {relative}")
+    root = installed_skill.resolve()
+    candidate = installed_skill / relative_path
+    target = candidate.resolve()
+    if target == root or root not in target.parents:
+        raise ValueError(f"unsafe installed reference: {relative}")
+    if candidate.is_symlink() or not target.is_file():
+        raise ValueError(f"missing installed reference: {relative}")
+    target.read_bytes()
+    return target
+
+
 def _smoke_check(installed_skill: Path, version: str) -> None:
-    skill_text = (installed_skill / "SKILL.md").read_text(encoding="utf-8")
-    if re.search(r"(?m)^name:\s*image-intake-router\s*$", skill_text) is None:
+    skill_path = _installed_regular_file(installed_skill, "SKILL.md")
+    skill_text = skill_path.read_text(encoding="utf-8")
+    frontmatter = _frontmatter_values(skill_text)
+    if frontmatter.get(("name",)) != PROJECT_NAME:
         raise ValueError("installed SKILL.md has wrong name")
-    if re.search(rf"(?m)^\s*version:\s*{re.escape(version)}\s*$", skill_text) is None:
+    if frontmatter.get(("metadata", "openclaw", "version")) != version:
         raise ValueError("installed SKILL.md has wrong version")
-    references = sorted(set(re.findall(r"\]\((references/[^)#]+)", skill_text)))
-    if not references:
-        raise ValueError("installed SKILL.md has no reference links")
-    missing = [name for name in references if not (installed_skill / name).is_file()]
-    if missing:
-        raise ValueError("missing installed references: " + ", ".join(missing))
-    schema_path = installed_skill / "templates" / "image-intake-router.schema.json"
+    references = set(re.findall(r"\]\((references/[^)#]+)", skill_text))
+    for reference in references:
+        _installed_regular_file(installed_skill, reference)
+    if references != _expected_references():
+        raise ValueError("installed reference set does not match release allowlist")
+    schema_path = _installed_regular_file(
+        installed_skill, "templates/image-intake-router.schema.json"
+    )
     schema = json.loads(schema_path.read_text(encoding="utf-8"))
     schema_version = schema["properties"]["schema_version"]["const"]
     if schema_version != "image-intake-router.v2":
@@ -598,7 +644,7 @@ def verify_release(archive: Path, checksum: Path, install_root: Path) -> Verific
     return VerificationReport(version, digest, len(members), installed_skill)
 ```
 
-The verifier must use pure `release_members()` for the expected set, never `runtime_members(root)`, so archive validation and installed smoke checks do not read the repository source tree. Keep the explicit rejections for absolute paths, `..`, non-regular members, wrong roots, duplicates, and allowlist differences.
+The verifier must use pure `release_members()` for the expected set, never `runtime_members(root)`, so archive validation and installed smoke checks do not read the repository source tree. The installed reference links must equal the exact six-file set derived from that pure allowlist; each resolved installed reference must remain under the installed Skill root, be a non-symlink regular file, and be read before schema validation. Keep the explicit rejections for absolute paths, `..`, non-regular members, wrong roots, duplicates, and allowlist differences.
 
 - [ ] **Step 4: Implement manual safe extraction and smoke checks**
 
@@ -606,8 +652,8 @@ Do not use unchecked `extractall`. For each validated regular file, resolve the 
 
 Smoke checks must:
 
-- parse `SKILL.md` frontmatter name and version,
-- resolve every Markdown reference linked from `SKILL.md`,
+- parse only the first fenced frontmatter block at the start of `SKILL.md`, requiring top-level `name: image-intake-router` and nested `metadata.openclaw.version` to equal the archive version; body text cannot satisfy either field,
+- derive the expected references solely from `release_members()`, require the parsed Markdown reference set to be exactly equal, and read every resolved installed reference after proving it remains inside the installed Skill root and is a non-symlink regular file,
 - parse the JSON Schema,
 - assert Schema `schema_version` is `image-intake-router.v2`,
 - assert no source directory path is read after installation.

@@ -6,11 +6,34 @@ import tarfile
 import tempfile
 import unittest
 from pathlib import Path
+from typing import Callable
+from unittest.mock import patch
 
 from scripts.build_release import build_release, read_version, runtime_members
 from scripts.verify_release import verify_release
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def _rewrite_skill(
+    archive: Path,
+    checksum: Path,
+    transform: Callable[[bytes], bytes],
+) -> None:
+    skill_name = "image-intake-router-2.0.0/image-intake-router/SKILL.md"
+    with tarfile.open(archive, "r:gz") as source:
+        members = [
+            (member.name, source.extractfile(member).read())
+            for member in source.getmembers()
+        ]
+    with tarfile.open(archive, "w:gz") as destination:
+        for name, data in members:
+            payload = transform(data) if name == skill_name else data
+            info = tarfile.TarInfo(name)
+            info.size = len(payload)
+            destination.addfile(info, io.BytesIO(payload))
+    digest = hashlib.sha256(archive.read_bytes()).hexdigest()
+    checksum.write_text(f"{digest}  {archive.name}\n", encoding="utf-8")
 
 
 class ReleaseBuildTests(unittest.TestCase):
@@ -130,3 +153,86 @@ class ReleaseBuildTests(unittest.TestCase):
             checksum.write_text(f"{digest}  {archive.name}\n", encoding="utf-8")
             with self.assertRaisesRegex(ValueError, "unsafe archive member"):
                 verify_release(archive, checksum, Path(install))
+
+    def test_missing_or_broken_frontmatter_fence_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as output:
+            archive, checksum = build_release(ROOT, Path(output))
+            original = (ROOT / "image-intake-router/SKILL.md").read_bytes()
+            second_fence = original.find(b"---", len(b"---"))
+            for transform in (
+                lambda _: original[len(b"---\n") :],
+                lambda _: original[:second_fence] + original[second_fence + len(b"---") :],
+            ):
+                _rewrite_skill(archive, checksum, transform)
+                with tempfile.TemporaryDirectory() as install:
+                    with self.assertRaisesRegex(ValueError, "invalid SKILL.md frontmatter"):
+                        verify_release(archive, checksum, Path(install))
+
+    def test_body_forged_frontmatter_fields_are_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as output, tempfile.TemporaryDirectory() as install:
+            archive, checksum = build_release(ROOT, Path(output))
+            forged = b"---\ndescription: safe\n---\nname: image-intake-router\nmetadata:\n  openclaw:\n    version: 2.0.0\n"
+            _rewrite_skill(archive, checksum, lambda _: forged)
+            with self.assertRaisesRegex(ValueError, "installed SKILL.md has wrong name"):
+                verify_release(archive, checksum, Path(install))
+
+    def test_replaced_reference_set_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as output, tempfile.TemporaryDirectory() as install:
+            archive, checksum = build_release(ROOT, Path(output))
+            _rewrite_skill(
+                archive,
+                checksum,
+                lambda content: content.replace(
+                    b"references/recognition-rules.md", b"references/calculation-rules.md"
+                ),
+            )
+            with self.assertRaisesRegex(ValueError, "installed reference set"):
+                verify_release(archive, checksum, Path(install))
+
+    def test_out_of_bounds_reference_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as output, tempfile.TemporaryDirectory() as install:
+            archive, checksum = build_release(ROOT, Path(output))
+            _rewrite_skill(
+                archive,
+                checksum,
+                lambda content: content.replace(
+                    b"references/recognition-rules.md", b"references/../../outside.md"
+                ),
+            )
+            with self.assertRaisesRegex(ValueError, "unsafe installed reference"):
+                verify_release(archive, checksum, Path(install))
+
+    def test_verification_does_not_read_source_tree_after_build(self) -> None:
+        with tempfile.TemporaryDirectory() as output, tempfile.TemporaryDirectory() as install:
+            archive, checksum = build_release(ROOT, Path(output))
+            original_read_bytes = Path.read_bytes
+            original_read_text = Path.read_text
+            original_is_file = Path.is_file
+
+            def in_source_tree(path: Path) -> bool:
+                resolved = path.resolve()
+                return resolved == ROOT or ROOT in resolved.parents
+
+            def guarded_read_bytes(path: Path) -> bytes:
+                if in_source_tree(path):
+                    raise AssertionError(f"source read after build: {path}")
+                return original_read_bytes(path)
+
+            def guarded_read_text(path: Path, *args: object, **kwargs: object) -> str:
+                if in_source_tree(path):
+                    raise AssertionError(f"source read after build: {path}")
+                return original_read_text(path, *args, **kwargs)
+
+            def guarded_is_file(path: Path) -> bool:
+                if in_source_tree(path):
+                    raise AssertionError(f"source read after build: {path}")
+                return original_is_file(path)
+
+            with (
+                patch.object(Path, "read_bytes", guarded_read_bytes),
+                patch.object(Path, "read_text", guarded_read_text),
+                patch.object(Path, "is_file", guarded_is_file),
+            ):
+                report = verify_release(archive, checksum, Path(install))
+
+            self.assertTrue((report.installed_skill / "SKILL.md").is_file())
