@@ -87,17 +87,52 @@ class RepositoryContractTests(unittest.TestCase):
         for workflow in [ci, release]:
             for command in required_commands:
                 self.assertIn(command, workflow)
+        for action in [
+            "actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4",
+            "actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5",
+        ]:
+            self.assertIn(action, ci)
+            self.assertIn(action, release)
         self.assertIn("tags:", release)
         self.assertIn("'v*'", release)
-        self.assertIn("contents: write", release)
-        self.assertIn("gh release create", release)
-        self.assertIn("RELEASE_NOTES.md", release)
-        self.assertIn("dist/*.tgz", release)
-        self.assertIn("dist/*.sha256", release)
+        self.assertIn("permissions: {}", release)
+        self.assertIn(
+            "actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 # v4",
+            release,
+        )
+        self.assertIn(
+            "actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4",
+            release,
+        )
+        verify, *publish_parts = release.split("\n  publish:", 1)
+        self.assertEqual(len(publish_parts), 1, "release workflow must split verify and publish")
+        publish = publish_parts[0]
+        self.assertIn("\n  verify:", verify)
+        self.assertIn("permissions:\n      contents: read", verify)
+        self.assertNotIn("contents: write", verify)
+        self.assertNotIn("GH_TOKEN", verify)
+        self.assertIn("needs: verify", publish)
+        self.assertIn("permissions:\n      actions: read\n      contents: write", publish)
+        self.assertEqual(release.count("contents: write"), 1)
+        self.assertEqual(release.count("GH_TOKEN"), 1)
+        self.assertIn("- name: Create GitHub Release", publish)
+        release_step = publish.split("- name: Create GitHub Release", 1)[1]
+        self.assertIn("GH_TOKEN: ${{ github.token }}", release_step)
+        self.assertIn("name: verified-release", verify)
+        self.assertIn("path: |\n            dist/\n            RELEASE_NOTES.md", verify)
+        self.assertIn("if-no-files-found: error", verify)
+        self.assertIn("retention-days: 1", verify)
+        self.assertIn("name: verified-release", publish)
+        self.assertIn('ARCHIVE="verified-release/dist/image-intake-router-$VERSION_FROM_TAG.tgz"', publish)
+        self.assertIn('CHECKSUM="$ARCHIVE.sha256"', publish)
+        self.assertIn('NOTES="verified-release/RELEASE_NOTES.md"', publish)
+        self.assertIn('"$ARCHIVE" "$CHECKSUM"', publish)
+        self.assertIn('--notes-file "$NOTES"', publish)
+        self.assertNotIn("dist/*.tgz", release)
+        self.assertNotIn("dist/*.sha256", release)
+        self.assertIn("gh release view", publish)
+        self.assertIn("Release already exists", publish)
         self.assertNotIn("continue-on-error: true", release)
         self.assertIn("pull_request:", ci)
         self.assertIn("permissions:\n  contents: read", ci)
-        self.assertIn(
-            "uses: actions/checkout@v4\n        with:\n          persist-credentials: false",
-            release,
-        )
+        self.assertIn("persist-credentials: false", release)

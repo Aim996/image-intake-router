@@ -5,17 +5,18 @@ on:
     tags:
       - 'v*'
 
-permissions:
-  contents: write
+permissions: {}
 
 jobs:
-  release:
+  verify:
+    permissions:
+      contents: read
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: "3.12"
       - name: Validate tag version and run publication gates
@@ -35,17 +36,57 @@ jobs:
             --archive "dist/image-intake-router-$VERSION_FROM_TAG.tgz" \
             --checksum "dist/image-intake-router-$VERSION_FROM_TAG.tgz.sha256" \
             --install-root build/smoke
+      - name: Upload verified release artifact
+        uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 # v4
+        with:
+          name: verified-release
+          path: |
+            dist/
+            RELEASE_NOTES.md
+          if-no-files-found: error
+          retention-days: 1
+
+  publish:
+    needs: verify
+    permissions:
+      actions: read
+      contents: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download verified release artifact
+        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4
+        with:
+          name: verified-release
+          path: verified-release
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
+          VERSION_FROM_TAG="${GITHUB_REF_NAME#v}"
+          ARCHIVE="verified-release/dist/image-intake-router-$VERSION_FROM_TAG.tgz"
+          CHECKSUM="$ARCHIVE.sha256"
+          NOTES="verified-release/RELEASE_NOTES.md"
+          for required_file in "$ARCHIVE" "$CHECKSUM" "$NOTES"; do
+            if [ ! -f "$required_file" ]; then
+              echo "Missing verified release file: $required_file" >&2
+              exit 1
+            fi
+          done
+          mapfile -t DIST_FILES < <(find verified-release/dist -type f -printf '%P\n' | sort)
+          EXPECTED_FILES=(
+            "image-intake-router-$VERSION_FROM_TAG.tgz"
+            "image-intake-router-$VERSION_FROM_TAG.tgz.sha256"
+          )
+          if [ "${DIST_FILES[*]}" != "${EXPECTED_FILES[*]}" ]; then
+            echo "Verified release artifact has unexpected dist files" >&2
+            exit 1
+          fi
           if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
             echo "Release already exists: $GITHUB_REF_NAME" >&2
             exit 1
           fi
-          VERSION_FROM_TAG="${GITHUB_REF_NAME#v}"
           gh release create "$GITHUB_REF_NAME" \
-            dist/*.tgz dist/*.sha256 \
+            "$ARCHIVE" "$CHECKSUM" \
             --title "image-intake-router $VERSION_FROM_TAG" \
-            --notes-file RELEASE_NOTES.md
+            --notes-file "$NOTES"
