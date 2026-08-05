@@ -34,6 +34,8 @@
 
 `line_items` 保留每个可见商品的结构化业务事实，独立于最长 1000 字符、面向人的 `note`；`note` 截断或概括时不得删除 `line_items` 的可见事实。`detail_completeness: "complete"` 仅表示商品明细完整且 `omitted_item_count` 为 0；`"partial"` 表示只路由可见明细，并把已知未展开、隐藏或裁切的商品种类计入 `omitted_item_count`；`"unavailable"` 表示没有可安全路由的商品明细。`omitted_item_count` 只计数已知遗漏，未知数目不得伪造为完整。
 
+只有 `full_name.value` 已知且非空、并且 `purchase_quantity.value` 为正数的商品行才可进入并转发 `line_items`；`purchase_quantity.unit` 在图片未显示时仍可为 `null`。其他已识别但不满足这两个账本边界的事实保留在统一 `facts` 与相关问题中，不得伪造为可写入的 `line_items`。
+
 `executable: false` 时，`amount`、`category_id`、`occurred_at`、`merchant` 与 `note`
 均为 `null`，并且 `issues` 至少包含一个面向人的不执行原因。`source_kind` 仍是
 `"image"`，但不得调用账本写入工具。
