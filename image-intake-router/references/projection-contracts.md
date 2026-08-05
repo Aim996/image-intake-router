@@ -93,3 +93,23 @@
 # Positive order-expense recipe
 
 When one order has one unique, directly labelled final-paid amount and its ordinary order facts are otherwise usable, build an executable expense projection. For a mixed supermarket order, the real public mapping is exactly `category_id: "shopping"`; if that ID is unavailable in the public ledger contract, mark the projection non-executable rather than guessing or using a display name. If the image has no reliable transaction time, use the current session time with its timezone as `occurred_at`. `merchant` remains `null` when unknown. Therefore a missing merchant or image timestamp alone is not a reason to suppress the expense projection. Mark it non-executable only when the paid amount is missing/conflicting, `shopping` is unavailable, or another stated execution requirement is genuinely unresolved.
+
+## v2.1 business-to-adapter rules
+
+This section controls if an earlier descriptive passage conflicts with it.
+
+### Expense
+
+Create one expense, never one expense per product. `line_items` contains every ledger-forwardable visible purchased product with name, quantity, specification/weight-or-volume, line paid amount, refund, and available metadata. `note` is generated independently as a concise display list; for many products it may name the first items plus `其他 N 种商品略`, but note truncation never removes or truncates structured `line_items`.
+
+Refund and short-weight facts remain in order/product facts and `line_items`. Do not create a refund income, negative expense, or second write, and do not net final paid unless the image explicitly establishes that result. Forward a present, nonempty `line_items` to personal-expense-ledger v0.3. If the installed ledger does not advertise support, fail that domain closed rather than silently dropping detail.
+
+### Diet/pantry
+
+`business_products` preserves source business facts and display semantics. `adapter_payload` contains deterministic technical normalization. `items` is the final strict public `diet_pantry.add` payload. Only clearly food + purchased + received rows enter `items`; hidden rows never do.
+
+Preserve the original display fact, such as `约 2.1 kg × 1袋`, in business facts even if the adapter uses `2100 g` or `piece`. Deterministic conversion is adapter-only: kg→g and L→ml use exact conversion without changing the digest. Unknown expiry adapts to the installed public schema; use its documented null or omission form and never invent a date.
+
+### Visible completeness
+
+Seven visible + two hidden yields at least 9/visible 7/hidden 2 in the user summary and only seven product rows downstream. Visible order detail remains in structured expense `line_items`; note summary/truncation never deletes line items. Refund facts remain but create no refund write.

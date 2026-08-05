@@ -44,39 +44,97 @@ class ProductContractTests(unittest.TestCase):
         ]
         self.assertEqual([str(path) for path in required if not path.is_file()], [])
 
-    def test_skill_declares_single_pass_dual_preview_and_confirmation(self) -> None:
-        content = self.read(SKILL)
-        self.assertRegex(content, r"^---\nname: image-intake-router\n")
-        for phrase in ["只识别一次", "默认.*两份", "确认", "只记账", "只入库", "consumed"]:
-            self.assertRegex(content, phrase)
-        self.assertNotIn("food-image-intake.v1.1", content)
-
-    def test_confirmation_contract_consumes_only_latest_preview_once(self) -> None:
-        content = self.read(REFERENCES / "confirmation-and-execution.md")
-        for phrase in [
-            "draft",
-            "awaiting_confirmation",
-            "executing",
-            "consumed",
-            "只记账",
-            "只入库",
-            "最近一次",
-            "修改",
-            "不得再次",
-        ]:
-            self.assertIn(phrase, content)
-
-    def test_output_contract_uses_exact_dual_preview_titles_and_empty_domain_rules(self) -> None:
+    def test_output_contract_uses_concise_business_output_and_no_verbose_skeleton(self) -> None:
         content = self.read(REFERENCES / "output-contract.md")
         for phrase in [
-            "💰 即将记入随手账：",
-            "🥗 即将交给食序管家入库：",
-            "仅展示存在的投影字段",
-            "无可执行投影",
-            "不执行",
-            "不调用该域写工具",
+            "one or two business sentences",
+            "full details only on request",
+            "no business preview or confirmation prompt",
+            "will not run and why",
+            "line_items",
+            "refund",
+        ]:
+            self.assertIn(phrase, content.lower())
+        self.assertNotIn("exact user-visible tokens byte-for-byte", content)
+        self.assertNotIn("Use this literal reply skeleton", content)
+
+    def test_projection_contract_preserves_order_detail_and_dual_projection_boundary(self) -> None:
+        content = self.read(REFERENCES / "projection-contracts.md")
+        for phrase in [
+            "one expense, never one expense per product",
+            "`line_items` contains every ledger-forwardable visible purchased product",
+            "`note` is generated independently",
+            "note truncation never removes or truncates structured `line_items`",
+            "fail that domain closed",
+            "`business_products` preserves source business facts",
+            "`adapter_payload` contains deterministic technical normalization",
+            "Only clearly food + purchased + received rows enter `items`",
+            "hidden rows never do",
+            "Unknown expiry adapts to the installed public schema",
         ]:
             self.assertIn(phrase, content)
+
+    def test_confirmation_uses_a_business_digest_and_one_later_confirmation(self) -> None:
+        content = self.read(REFERENCES / "confirmation-and-execution.md")
+        for phrase in [
+            "business_digest",
+            "canonical representation",
+            "final paid amount and category business meaning",
+            "expense/diet selected scopes",
+            "initial image turn",
+            "zero business writes",
+            "later valid confirmation",
+            "Business-field or selected-scope changes require a new preview and confirmation",
+            "Adapter-only changes do not change the digest and do not reconfirm",
+            "kg/g/L/ml conversion",
+            "expiry null/omission/version adaptation",
+            "stable call IDs",
+        ]:
+            self.assertIn(phrase, content)
+
+    def test_recovery_has_exactly_four_states_and_one_correction_path(self) -> None:
+        content = self.read(REFERENCES / "failure-recovery.md")
+        self.assertRegex(
+            content,
+            r"Execution statuses are exactly: `not_executed`, `written`, "
+            r"`failed_before_write`, `indeterminate`\.",
+        )
+        self.assertIn("There is no generic terminal `failed` state", content)
+        self.assertNotRegex(content, r"\|.*`failed`.*\|")
+        for phrase in [
+            "at most one deterministic adapter-only correction",
+            "business digest is unchanged",
+            "does not replay the expense or any written pantry item",
+            "queries the documented downstream status/idempotency state first",
+            "Never resubmit blindly",
+            "One pantry item failure does not replay written siblings",
+            "Do not directly edit SQLite",
+        ]:
+            self.assertIn(phrase, content)
+
+    def test_default_output_hides_internal_data_and_partial_order_detail_survives(self) -> None:
+        output = self.read(REFERENCES / "output-contract.md")
+        projection = self.read(REFERENCES / "projection-contracts.md")
+        for token in [
+            "visible_label",
+            "user_text",
+            "attachment_context",
+            "shopping",
+            "ISO timestamp",
+            "expires_at",
+            "technical `piece`",
+            "preview revision",
+            "operation/call IDs",
+            "adapter versions",
+            "internal execution-state names",
+        ]:
+            self.assertIn(token, output)
+        for phrase in [
+            "seven visible + two hidden yields at least 9/visible 7/hidden 2",
+            "only seven product rows downstream",
+            "refund facts remain but create no refund write",
+        ]:
+            self.assertIn(phrase, projection.lower())
 
     def test_schema_is_strict_and_namespaces_projections(self) -> None:
         schema = json.loads(self.read(SCHEMA))
@@ -185,11 +243,36 @@ class ProductContractTests(unittest.TestCase):
     def test_skill_references_only_existing_local_files(self) -> None:
         content = self.read(SKILL)
         targets = re.findall(r"\]\((references/[^)]+\.md)\)", content)
+        expected = {
+            "references/recognition-rules.md",
+            "references/calculation-rules.md",
+            "references/projection-contracts.md",
+            "references/confirmation-and-execution.md",
+            "references/output-contract.md",
+            "references/failure-recovery.md",
+            "references/vision-runtime.md",
+        }
+        self.assertEqual(set(targets), expected)
+        self.assertTrue(all("\\" not in target for target in targets))
+        self.assertLess(len(content.splitlines()), 500)
         self.assertGreaterEqual(len(targets), 6)
         self.assertEqual(
             [target for target in targets if not (SKILL_ROOT / target).is_file()],
             [],
         )
+
+    def test_skill_removes_described_image_exception_and_verbose_skeleton(self) -> None:
+        content = self.read(SKILL)
+        self.assertNotIn("For a described image with no pixels", content)
+        self.assertNotIn("Use this literal reply skeleton", content)
+        for phrase in [
+            "recognition_run",
+            "one unified fact set",
+            "one concise business preview",
+            "zero business writes",
+            "later confirmation",
+        ]:
+            self.assertIn(phrase, content)
 
     def test_recognition_rules_cover_order_facts_and_overlap_dedup(self) -> None:
         content = self.read(REFERENCES / "recognition-rules.md")

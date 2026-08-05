@@ -1,30 +1,21 @@
-# 确认与执行
+# Confirmation and execution
 
-本契约管理同一份完整双预览的确认、写入范围与一次性消费；它不重新识别图片，也不修改投影内容。
+## Canonical business digest
 
-## 预览修订与状态
+Build `business_digest` from the canonical representation of the user-confirmed business content and retain a stable fingerprint over that representation. It includes final paid amount and category business meaning; merchant and business time; every product's name, purchase count, display unit, specification, weights/volumes, line paid amount, and refund; expense/diet selected scopes and included/excluded product identities; and declared/visible/hidden counts plus the completeness warning.
 
-每份完整双预览必须带有递增的修订版，并依次经过 `draft`、`awaiting_confirmation`、`executing`、`consumed`：
+The user confirms this digest, never an adapter payload. Business-field or selected-scope changes require a new preview and confirmation: amount, category, merchant, time, name, quantity, specification, line price, refund, product addition/removal, selected scope, or completeness conclusion all change the digest.
 
-1. 首个含图片的回合建立 `draft`，生成记账与入库两份完整预览后进入 `awaiting_confirmation`。该回合必须是零工具调用，且不得有任何业务写入。
-2. 只有最近一次完整预览且状态为 `awaiting_confirmation`，才可接收后续回合的确认。
-3. 金额、分类、商品、规格、数量、范围或其他预览字段发生修改时，必须建立新修订版；旧修订版立即失效，不得再确认或执行。新修订版重新展示两份预览后才可进入 `awaiting_confirmation`。
-4. 接受有效确认时，先将该修订版从 `awaiting_confirmation` 置为 `executing`，以消费其一次性写入资格；此步骤必须发生在第一笔业务写调用之前。完成、部分失败或失败处理完成后置为 `consumed`。
+Adapter-only changes do not change the digest and do not reconfirm. They include `piece` conversion, deterministic kg/g/L/ml conversion, expiry null/omission/version adaptation, payload ordering, strict payload normalization, internal handles, adapter versions, and stable call IDs.
 
-## 确认范围
+## Preview and confirmation
 
-有效确认只作用于最近一次完整预览的可执行投影：
+Keep `draft` → `awaiting_confirmation` → `executing` → `consumed`, with a latest-preview-only rule. The initial image turn requires a successful or partial `recognition_run`, creates one unified fact set and one business preview, and makes zero business writes. A confirmation word in that image message cannot execute; only a later valid confirmation of the latest `awaiting_confirmation` digest can execute.
 
-| 用户回复 | 确认范围 | 执行内容 |
-| --- | --- | --- |
-| 确认、可以、就这样 | `all` | 所有可执行投影 |
-| 只记账 | `expense_only` | 仅费用域 |
-| 只入库 | `diet_only` | 仅饮食域 |
+Valid later confirmation may select all executable work, expense only, or diet only. Questions and clarification requests are not confirmation. When a digest business field changes, invalidate the old preview, make the new preview visible, then await its confirmation. Adapter-only corrections retain the original confirmation as described in recovery.
 
-问题、澄清请求或仅询问预览内容不是确认，必须保持在 `awaiting_confirmation`，且不得写入。初始图片回合中即使包含“确认”也不构成对尚未展示预览的确认。
+Before a first selected business write, atomically move the confirmed preview to `executing`; after all selected attempts and required status queries finish, move it to `consumed`. A repeated confirmation of `executing` or `consumed` returns the safe known receipt/state and makes zero new writes.
 
-## 一次性执行与失败
+## Independent execution
 
-- 对 `executing` 或 `consumed` 修订版的重复确认必须产生零次新的业务写调用；不得再次写入。
-- 两个业务域独立提交。若一个域失败，必须如实报告结果；成功域已经完成的写入不得因重试或再次确认而重放。
-- 失败域的后续处理必须使用其自身的恢复契约；它不授权重放成功域，也不恢复已经消费的预览。
+Execute the selected expense scope and each eligible pantry item independently with only their public payloads. Do not run a non-executable domain. A failure in one domain or one pantry item never authorizes replay of a written expense or written sibling. The consumed preview stores safe execution outcomes for duplicate confirmations.

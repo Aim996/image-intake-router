@@ -1,55 +1,28 @@
-# Failure recovery and one-time write ledger
+# Failure recovery and one-confirmation write ledger
 
-This contract applies after a complete preview has been displayed. It does not authorize another visual pass, direct database access, a raw-image handoff, or a write before confirmation. The expense database and pantry database are separate; a result in one is never evidence of a result in the other.
+Maintain a session-local ledger for the selected expense operation and each selected pantry item. Use stable operation IDs internally; never expose them by default. Do not directly edit SQLite, add undocumented parameters, or treat a repeated confirmation as a new write request.
 
-## Consume before any business write
+Execution statuses are exactly: `not_executed`, `written`, `failed_before_write`, `indeterminate`.
 
-On a valid confirmation, atomically move the latest `awaiting_confirmation` revision to `executing` **before** its first business write attempt. That immediately consumes the preview's authority to execute. When all selected attempts and any required status lookups finish, move it to `consumed`, even when one or more results failed or remain indeterminate. A repeated confirmation of `executing` or `consumed` must make no new business write.
+| State | Meaning | Required action |
+| --- | --- | --- |
+| `not_executed` | No downstream submission has begun. | It can be selected for the confirmed operation. |
+| `written` | The downstream positively committed. | Never replay it. |
+| `failed_before_write` | The downstream/schema positively proves no commit. | It may have one deterministic adapter-only correction. |
+| `indeterminate` | Submission may have happened, but commitment is unknown. | Query documented status/idempotency state first. |
 
-Any repair is a separate, user-visible revision containing only the still eligible uncommitted work and requires a new confirmation. It must not replay a successful expense or successful pantry item.
+There is no generic terminal `failed` state in the execution ledger. Immediately before a public call, record `indeterminate`; definite success becomes `written`, and positive proof that no write committed becomes `failed_before_write`.
 
-## Status ledger
+## One deterministic correction
 
-Maintain a session-local status ledger for the selected domain and every selected pantry item. It is coordination state only: do not put raw images, paths, base64, full OCR, payment accounts, credentials, downstream identifiers, idempotency keys, or preview identifiers in the preview, note, receipt, or durable business data.
+Permit at most one deterministic adapter-only correction after a definite pre-write failure, only when the business digest is unchanged. Examples include converting `piece`, deterministic kg→g or L→ml conversion, and omitting a rejected null expiry when the installed public schema documents that adaptation. This correction stays under the original one confirmation, does not replay the expense or any written pantry item, and does not ask for a second confirmation.
 
-| Scope | Initial status | Legal terminal/status outcomes | Meaning and next action |
-| --- | --- | --- | --- |
-| `expense` domain | `not_executed` | `written`, `failed`, `indeterminate` | One prospective ledger write. |
-| each `diet_projection.items[i]` | `not_executed` | `written`, `failed`, `indeterminate` | One prospective pantry write, independent of all other items. |
-| excluded/uncertain pantry row | not selected | no write status | Never call the pantry writer for it. |
+If a repair changes amount, identity, quantity business meaning, specification, price, refund, selected scope, or completeness, it is a business change: stop, create a new preview, and require a new confirmation.
 
-The status vocabulary is exact:
+## Indeterminate results
 
-- `not_executed`: no write has been attempted. It may appear only before this scope/item is selected and attempted. A new revision may include it after a confirmed correction.
-- `written`: the downstream tool positively confirmed the write. It is committed and must never be replayed by repeated confirmation or recovery.
-- `failed`: the downstream tool positively confirmed that this write was not committed. Preserve the safe reason. It may be offered in a corrected new preview; never silently retry it from the consumed revision.
-- `indeterminate`: the client cannot establish whether the downstream write committed (for example, timeout/disconnect after submission). It is neither a success nor a safe retry.
+For `indeterminate`, queries the documented downstream status/idempotency state first. Never resubmit blindly. If that query proves commitment, change to `written`; if it positively proves no commitment, change to `failed_before_write`; otherwise retain `indeterminate`, report the uncertainty safely, and make no automatic retry.
 
-Immediately before calling its public downstream tool, change each selected entry from `not_executed` to `indeterminate`. `indeterminate` is the only four-status representation once an external call has begun: it means the result is not yet established. A definite tool success changes it to `written`; a definite non-commit failure changes it to `failed`; a timeout, crash, disconnect, or missing result leaves it `indeterminate` and enters the query-first path. Do not introduce an in-flight or any other fifth status.
+## Independent outcomes and receipt
 
-## Indeterminate results: query first, never blind retry
-
-For an `indeterminate` expense or pantry item, first use only the downstream Skill's documented status/idempotency query path (`Q`) and its public schema. Do not add parameters, edit SQLite directly, guess a lookup, or treat another confirmation as a retry request.
-
-- If the query proves the write committed, set status to `written` and report it as committed.
-- If the query proves it did not commit, set status to `failed`, state it is uncommitted, and offer a corrected preview if the user wants to retry.
-- If the query is unavailable or still inconclusive, retain `indeterminate`. Report `result indeterminate; no write was repeated`, and keep it out of any automatic retry path.
-
-Both `written` and `indeterminate` are non-replayable by repeated confirmation. The same holds when one domain succeeds while another domain fails; cross-domain rollback is prohibited.
-
-## Independent execution and receipts
-
-For each selected scope, call only the declared public tool payload from the projection contract. Do not call the expense writer when no executable expense exists, and do not call the pantry writer for excluded or uncertain rows. Continue reporting independently if another domain/item fails, subject to the downstream circuit-breaker contract.
-
-Every execution receipt must explicitly enumerate both sides; never summarize partial progress as “all complete.” Use this shape, omitting only a domain that was explicitly outside the confirmation scope:
-
-```text
-Execution result (this preview is consumed)
-- Expense: committed / not committed (failed) / result indeterminate; no write repeated.
-- Pantry committed: <each item name>.
-- Pantry not committed: <each failed item name and safe reason>.
-- Pantry indeterminate: <each item name>; status checked / cannot yet be determined; no write repeated.
-- Not submitted by scope: <expense or item names>.
-```
-
-`written` entries belong under committed. `failed` entries belong under not committed. `indeterminate` entries must be separately named; do not label them committed or uncommitted. `not_executed` entries must state why they were not submitted (unselected scope, non-executable projection, excluded, uncertain, or a newly required correction). This explicit accounting is also required when no tool calls occur.
+Expense success followed by pantry failure or correction never replays the expense. One pantry item failure does not replay written siblings; continue independent eligible items unless a downstream circuit breaker requires stopping that domain. The consumed receipt records committed, failed-before-write, indeterminate, and not-submitted outcomes without calling them internal states in the default user output.
