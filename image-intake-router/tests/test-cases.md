@@ -2,7 +2,7 @@
 
 ## Test convention
 
-These are behavioural contracts, not examples of a live visual read. Where a case says an image is *described*, every stated fact has source `user_text`; it must never be represented as `visible_label`. In a live image test, only pixels available to the model may produce a `visible_label` fact. Every initial-image case ends in one complete dual preview and has **zero business writes**. Each preview includes the expense decision, pantry candidates, excluded items, uncertain items, and the prompt: `Confirm, expense only, pantry only, or describe a change.`
+These are behavioural contracts, not examples of a live visual read. Where a case says an image is *described*, every stated fact has source `user_text`; it must never be represented as `visible_label`. A genuinely authored user-message-text case remains distinct from attachment context. Where a case relies on live-image facts, only pixels available to the model may produce a `visible_label` fact and the case must include an explicit successful `recognition_run`; attachment presence, a filename, alt text, or an unexecuted vision request is not a successful recognition result. Every initial-image case ends in one complete dual preview and has **zero business writes**. Each preview includes the expense decision, pantry candidates, excluded items, uncertain items, and the prompt: `Confirm, expense only, pantry only, or describe a change.`
 
 Tool notation: `E` is one allowed `expense_entry.create`; `D(item)` is one allowed `diet_pantry.add` for that item; `Q` is the downstream status query specified by its own contract. `[]` means no business tool calls.
 
@@ -135,3 +135,63 @@ Tool notation: `E` is one allowed `expense_entry.create`; `D(item)` is one allow
 **Allowed trace.** `[]` before confirmation; after confirmation `[E, D(milk-250ml-x2), D(milk-1l)]`.
 
 **Forbidden.** Merging the 250 ml and 1 L rows; multiplying one because of the overlap; claiming pixel evidence in this description-only case.
+
+### C14 — facts genuinely authored in user message text
+
+**Input facts.** The user writes, without attaching an image: `I bought apples 1 kg and milk 1 L today; the final paid amount was RMB 42.00.` These are facts authored in the user’s message text, not attachment context and not a visual result.
+
+**Expected complete preview.** Preserve the supplied facts as `user_text` and explicitly say no image was read and no `visible_label` was observed. Do not manufacture an attachment, a `recognition_run`, a receipt timestamp, a merchant, purchase-receipt evidence, or pantry eligibility that the written message did not supply.
+
+**Allowed trace.** `[]` before an explicit confirmation.
+
+**Forbidden.** Relabelling authored text as `visible_label`; treating message text as a successful `recognition_run`; deriving unseen item status or expiry information.
+
+### C15 — live image requires an explicit successful recognition run
+
+**Input facts.** A user uploads a receipt image. The environment records `recognition_run: {status: "succeeded", input: "the attached image batch"}` and returns visible labels for a uniquely labelled final paid amount RMB 36.00 and bread 400 g marked `purchased_and_received`.
+
+**Expected complete preview.** Facts drawn from the image may be `visible_label` only because the explicit `recognition_run` succeeded. Preview one executable expense and bread 400 g as the pantry candidate; retain the successful recognition result in the business trace rather than inventing a second visual pass.
+
+**Allowed trace.** Before confirmation `[]`; after all-domain confirmation `[E, D(bread-400g)]`.
+
+**Forbidden.** Treating attachment presence alone as recognition; launching another recognition run from either projection; a business write before confirmation.
+
+### C16 — durian short-weight and refund facts remain separate
+
+**Input facts.** A successful `recognition_run` on one live order image identifies final paid amount `RMB 119.00`, durian `about 2.1 kg × 1` marked `purchased_and_received`, a `228 g` short-weight variance, and refund `RMB 12.92`.
+
+**Expected complete preview.** The expense projection uses RMB 119.00 as the unique paid amount. Durian remains one food fact with its about-2.1-kg quantity and receipt status. The 228 g variance and RMB 12.92 refund remain separately traceable auxiliary/order facts; they do not replace the paid amount, create a refund ledger write, or silently alter the pantry quantity.
+
+**Allowed trace.** Before confirmation `[]`; after all-domain confirmation `[E, D(durian-about-2.1kg-x1)]`.
+
+**Forbidden.** Netting RMB 12.92 against RMB 119.00; interpreting the 228 g variance as a new product row; inventing a precise corrected pantry mass; a refund business write.
+
+### C17 — seven visible products plus two collapsed products
+
+**Input facts.** A successful `recognition_run` on a live order image returns seven visible, received foods: apples 1 kg, eggs 10 pieces, milk 250 ml × 2, yogurt 200 g, rice 1 kg, spinach 300 g, and bananas 500 g. The same image visibly says `2 more products collapsed; expand to view`; their names, quantities, and statuses are unavailable. A unique final paid amount is RMB 168.00.
+
+**Expected complete preview.** The expense note and pantry candidates enumerate the seven visible products exactly once. The two collapsed products are separately represented as unknown/uncertain rows, with the reason that their required details were not visible. The preview does not silently discard their existence or invent their contents.
+
+**Allowed trace.** Before confirmation `[]`; after all-domain confirmation `[E, D(apples-1kg), D(eggs-10), D(milk-250ml-x2), D(yogurt-200g), D(rice-1kg), D(spinach-300g), D(bananas-500g)]`.
+
+**Forbidden.** Calling an expansion/navigation action; treating the collapsed count as sufficient pantry evidence; a second recognition pass; immediate execution under time pressure.
+
+### C18 — vision was not executed despite attachment context
+
+**Input facts.** The user attaches a grocery-order image and says `please process this quickly`. The environment records `recognition_run: {status: "not_executed"}`. Attachment metadata names the file `order-119-yuan.png`, but no pixels or user-authored order facts are available.
+
+**Expected complete response.** Say that visual recognition was not executed and image fields remain unknown. Request a successful recognition result or genuinely authored user text; do not generate expense, pantry, or business-write payloads from the attachment metadata.
+
+**Allowed trace.** `[]`.
+
+**Forbidden.** Treating the filename or attachment context as `user_text` or `visible_label`; inferring a payment amount; creating a preview or calling either business writer.
+
+### C19 — adapter-only unit and expiry repair after one confirmation
+
+**Input facts.** A live-image `recognition_run` succeeded and one confirmed preview contains a received durian `about 2.1 kg × 1`. The expense write succeeds. The first pantry submission is definitely rejected only because its downstream adapter rejects `unit: "kg"` and `expires_at: null`; the adapter has a documented public-schema repair from kg to g and from a rejected null expiry field to an omitted expiry field.
+
+**Expected complete receipt.** Keep the confirmed expense committed and do not ask for another user confirmation. The adapter performs only the deterministic pantry payload repair: `quantity: 2100`, `unit: "g"`, and no expiry field. It then submits the still-uncommitted durian once through the public pantry interface and reports both attempts and the final item status. No image facts, product identity, amount, or receipt evidence may change during this repair.
+
+**Allowed trace.** `[E, D(durian-2.1kg-initial), D(durian-2100g-repaired)]` after the one confirmation.
+
+**Forbidden.** Replaying `E`; requesting a second confirmation solely for this adapter-only repair; retrying a non-deterministically changed payload; a second recognition run; exposing internal adapter parameters in the user-visible receipt.
