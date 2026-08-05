@@ -440,4 +440,3 @@ Then, under the user's explicit authorization for the complete 2.0.1 release:
 4. Create an annotated `v2.0.1` pointing to the reviewed `main` commit and ordinary-push it.
 5. Observe the tag workflow. If it cannot start because the known billing lock remains, create a draft Release through the authorized official API fallback, upload exactly the two custom assets, download and hash-verify both, publish the draft, and keep the already-public repository Public.
 6. Independently download both assets from public URLs, require checksum equality and a 15-member isolated install, then verify the GitHub Release is Latest and points to the exact reviewed commit.
-
