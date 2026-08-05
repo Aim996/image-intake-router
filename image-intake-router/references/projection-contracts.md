@@ -19,16 +19,13 @@
 10. `detail_completeness`：`complete`、`partial` 或 `unavailable`。
 11. `omitted_item_count`：未包含在 `line_items` 中、但已知存在的商品种类数。
 
-`executable: true` 时，`amount`、`category_id` 与 `occurred_at` 必须非空；执行器以
-`expense_entry(action="create")` 提交它们和恒定的 `source_kind: "image"`。只有
-`merchant`、`note` 非空时才传入这两个可选公开参数。不得传 `entry_type`，也不得传
-任何其他未声明字段。
+`executable: true` 时，`amount`、`category_id` 与 `occurred_at` 必须非空。执行 `expense_entry(action="create")` 的公开参数白名单只有：必传的 `amount`、`category_id`、`occurred_at` 与恒定 `source_kind: "image"`；非空时可选的 `merchant`、`note`；以及存在时可选的 v0.3 结构化 `line_items`（1 至 100 项）。`line_items` 必须原样转发，不能静默丢弃或缩减为 `note`。不得传 `entry_type` 或任何其他字段，尤其不得传路由器内部的 `executable`、`detail_completeness`、`omitted_item_count` 或 `issues`。
 
 `amount` 的范围必须与公开账本 Schema 一致：大于 0 且不超过 `9999999999.99`。`occurred_at`
 必须是 20 到 40 个字符的带时区 ISO 8601 时间；这两个边界在基础投影和可执行分支都必须
 保持一致。
 
-`expense_projection` 同时包含路由器预览状态和下游公开账本写入 payload。执行 `expense_entry(action="create")` 时，公开参数保留 `amount`、`category_id`、`occurred_at`、恒定的 `source_kind: "image"`，以及非空时的 `merchant` 和 `note`；在协调的 v2.1 与 personal-expense-ledger v0.3 执行中，存在的 `line_items` 也是可选结构化公开参数，必须原样转发，绝不静默丢弃或缩减为 `note`。`executable`、`detail_completeness`、`omitted_item_count` 和 `issues` 是路由器内部元数据，绝不作为账本参数；若已安装账本未声明 `line_items`，必须标记兼容性不满足为不可执行/错误，而不是删除明细或调用旧 payload。
+`expense_projection` 同时包含路由器预览状态和下游公开账本写入 payload；其公开参数白名单以上述规则为准。`executable`、`detail_completeness`、`omitted_item_count` 和 `issues` 是路由器内部元数据，绝不作为账本参数；若已安装账本未声明 `line_items`，必须标记兼容性不满足为不可执行/错误，而不是删除明细或调用旧 payload。
 
 一张票据或一笔订单只产生一笔费用投影，绝不按商品拆账。若存在可识别的实际购买商品，
 `note` 是面向人的简短摘要，在长度允许时列出商品名称（包括非食品），但从不作为完整单品清单或价目表。只有带唯一、直接的

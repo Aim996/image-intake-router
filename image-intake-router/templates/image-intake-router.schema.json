@@ -525,7 +525,7 @@
           "items": { "type": "string", "minLength": 1, "maxLength": 500 },
           "maxItems": 50
         },
-        "line_items": { "type": "array", "items": { "$ref": "#/$defs/expenseLineItem" }, "maxItems": 100 },
+        "line_items": { "type": "array", "items": { "$ref": "#/$defs/expenseLineItem" }, "minItems": 1, "maxItems": 100 },
         "detail_completeness": { "enum": ["complete", "partial", "unavailable"] },
         "omitted_item_count": { "type": "integer", "minimum": 0, "maximum": 1000000 }
       },
