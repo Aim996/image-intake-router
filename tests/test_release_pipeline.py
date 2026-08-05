@@ -202,6 +202,9 @@ class ReleaseBuildTests(unittest.TestCase):
                 self.assertEqual(archive.read_bytes(), original_archive)
                 self.assertEqual(checksum.read_text(encoding="utf-8"), original_checksum)
 
+            readme.unlink()
+            readme.write_bytes(b"alpha\nbeta\n")
+
             outside_docs = temporary / "outside-docs"
             outside_docs.mkdir()
             for name in ("AI-PROMPTS.md", "INSTALL.md", "UPGRADING.md"):
