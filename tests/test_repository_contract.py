@@ -45,6 +45,16 @@ class RepositoryContractTests(unittest.TestCase):
                 or re.search(r"(?m)^        uses: ", step[1])
             ]
 
+        def permission_map(job_text: str) -> dict[str, str]:
+            match = re.search(
+                r"(?m)^    permissions:\n((?:      [A-Za-z-]+: [^\n]+\n)+)",
+                job_text,
+            )
+            self.assertIsNotNone(match)
+            entries = re.findall(r"(?m)^      ([A-Za-z-]+): ([^\n]+)$", match.group(1))
+            self.assertEqual(len(entries), len({key for key, _ in entries}))
+            return dict(entries)
+
         required_commands = [
             "tests.test_repository_contract",
             "image-intake-router/tests/test_static_contract.py",
@@ -75,16 +85,18 @@ class RepositoryContractTests(unittest.TestCase):
 
         self.assertIn("tags:", release)
         self.assertIn("'v*'", release)
-        self.assertIn("permissions: {}", release)
+        self.assertRegex(release, r"(?m)^permissions: \{\}$")
         verify, *publish_parts = release.split("\n  publish:", 1)
         self.assertEqual(len(publish_parts), 1, "release workflow must split verify and publish")
         publish = publish_parts[0]
         self.assertIn("\n  verify:", verify)
-        self.assertIn("permissions:\n      contents: read", verify)
-        self.assertNotIn("contents: write", verify)
+        self.assertEqual(permission_map(verify), {"contents": "read"})
         self.assertNotIn("GH_TOKEN", verify)
         self.assertIn("needs: verify", publish)
-        self.assertIn("permissions:\n      actions: read\n      contents: write", publish)
+        self.assertEqual(
+            permission_map(publish),
+            {"actions": "read", "contents": "write"},
+        )
         self.assertEqual(release.count("contents: write"), 1)
         self.assertEqual(release.count("GH_TOKEN"), 1)
 
@@ -124,10 +136,13 @@ class RepositoryContractTests(unittest.TestCase):
             '            "image-intake-router-$VERSION_FROM_TAG.tgz.sha256"\n          )',
             create_step,
         )
-        self.assertIn(
-            'if [ "${DIST_FILES[*]}" != "${EXPECTED_FILES[*]}" ]; then',
+        mismatch_branch = re.search(
+            r'(?ms)^          if \[ "\$\{DIST_FILES\[\*\]\}" != "\$\{EXPECTED_FILES\[\*\]\}" \]; then\n'
+            r"(?P<body>.*?)^          fi$",
             create_step,
         )
+        self.assertIsNotNone(mismatch_branch)
+        self.assertRegex(mismatch_branch.group("body"), r"(?m)^            exit 1$")
         self.assertIn(
             'gh release create "$GITHUB_REF_NAME" \\\n            "$ARCHIVE" "$CHECKSUM" \\\n            --title "image-intake-router $VERSION_FROM_TAG" \\\n            --notes-file "$NOTES"',
             create_step,
@@ -235,6 +250,42 @@ class RepositoryContractTests(unittest.TestCase):
             '            --notes-file "$NOTES"\n',
             '            --notes-file "$NOTES"\n      - run: echo "unexpected token step"\n'
             "        env:\n          GH_TOKEN: ${{ github.token }}\n",
+            1,
+        )
+        with self.assertRaises(AssertionError):
+            self._assert_release_workflow_contract(ci, mutated)
+
+    def test_release_contract_rejects_permission_expansion(self) -> None:
+        ci = self.read(".github/workflows/ci.yml")
+        release = self.read(".github/workflows/release.yml")
+        mutations = {
+            "verify": (
+                "      contents: read\n    runs-on:",
+                "      contents: read\n      issues: write\n    runs-on:",
+            ),
+            "publish": (
+                "      contents: write\n    runs-on:",
+                "      contents: write\n      issues: write\n    runs-on:",
+            ),
+        }
+        for job, (original, replacement) in mutations.items():
+            with self.subTest(job=job):
+                mutated = release.replace(original, replacement, 1)
+                with self.assertRaises(AssertionError):
+                    self._assert_release_workflow_contract(ci, mutated)
+
+    def test_release_contract_rejects_dist_mismatch_without_exit(self) -> None:
+        ci = self.read(".github/workflows/ci.yml")
+        release = self.read(".github/workflows/release.yml")
+        mismatch_branch = (
+            '          if [ "${DIST_FILES[*]}" != "${EXPECTED_FILES[*]}" ]; then\n'
+            '            echo "Verified release artifact has unexpected dist files" >&2\n'
+            "            exit 1\n"
+            "          fi\n"
+        )
+        mutated = release.replace(
+            mismatch_branch,
+            mismatch_branch.replace("            exit 1\n", ""),
             1,
         )
         with self.assertRaises(AssertionError):
