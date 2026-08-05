@@ -93,15 +93,21 @@ class RepositoryContractTests(unittest.TestCase):
         ]:
             self.assertIn(action, ci)
             self.assertIn(action, release)
+        for workflow in [ci, release]:
+            for action in re.findall(r"(?m)^\s*- uses: ([^\s]+)", workflow):
+                self.assertRegex(
+                    action,
+                    r"^actions/(?:checkout|setup-python|upload-artifact|download-artifact)@[0-9a-f]{40}$",
+                )
         self.assertIn("tags:", release)
         self.assertIn("'v*'", release)
         self.assertIn("permissions: {}", release)
         self.assertIn(
-            "actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 # v4",
+            "actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4",
             release,
         )
         self.assertIn(
-            "actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4",
+            "actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4",
             release,
         )
         verify, *publish_parts = release.split("\n  publish:", 1)
@@ -115,9 +121,21 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertIn("permissions:\n      actions: read\n      contents: write", publish)
         self.assertEqual(release.count("contents: write"), 1)
         self.assertEqual(release.count("GH_TOKEN"), 1)
-        self.assertIn("- name: Create GitHub Release", publish)
-        release_step = publish.split("- name: Create GitHub Release", 1)[1]
-        self.assertIn("GH_TOKEN: ${{ github.token }}", release_step)
+        publish_steps = re.findall(
+            r"(?ms)^      - name: ([^\n]+)\n(.*?)(?=^      - name: |\Z)",
+            publish,
+        )
+        self.assertEqual(
+            [name for name, _ in publish_steps],
+            ["Download verified release artifact", "Create GitHub Release"],
+        )
+        token_steps = [name for name, body in publish_steps if "GH_TOKEN" in body]
+        self.assertEqual(token_steps, ["Create GitHub Release"])
+        create_step = publish_steps[-1][1]
+        self.assertRegex(
+            create_step,
+            r"(?m)^        env:\n          GH_TOKEN: \$\{\{ github\.token \}\}$",
+        )
         self.assertIn("name: verified-release", verify)
         self.assertIn("path: |\n            dist/\n            RELEASE_NOTES.md", verify)
         self.assertIn("if-no-files-found: error", verify)
@@ -126,8 +144,23 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertIn('ARCHIVE="verified-release/dist/image-intake-router-$VERSION_FROM_TAG.tgz"', publish)
         self.assertIn('CHECKSUM="$ARCHIVE.sha256"', publish)
         self.assertIn('NOTES="verified-release/RELEASE_NOTES.md"', publish)
-        self.assertIn('"$ARCHIVE" "$CHECKSUM"', publish)
-        self.assertIn('--notes-file "$NOTES"', publish)
+        self.assertIn(
+            "mapfile -t DIST_FILES < <(find verified-release/dist -type f -printf '%P\\n' | sort)",
+            create_step,
+        )
+        self.assertIn(
+            'EXPECTED_FILES=(\n            "image-intake-router-$VERSION_FROM_TAG.tgz"\n'
+            '            "image-intake-router-$VERSION_FROM_TAG.tgz.sha256"\n          )',
+            create_step,
+        )
+        self.assertIn(
+            'if [ "${DIST_FILES[*]}" != "${EXPECTED_FILES[*]}" ]; then',
+            create_step,
+        )
+        self.assertIn(
+            'gh release create "$GITHUB_REF_NAME" \\\n            "$ARCHIVE" "$CHECKSUM" \\\n            --title "image-intake-router $VERSION_FROM_TAG" \\\n            --notes-file "$NOTES"',
+            create_step,
+        )
         self.assertNotIn("dist/*.tgz", release)
         self.assertNotIn("dist/*.sha256", release)
         self.assertIn("gh release view", publish)
