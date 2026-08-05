@@ -45,12 +45,14 @@ def _rewrite_skill(
     checksum: Path,
     transform: Callable[[bytes], bytes],
 ) -> None:
-    skill_name = "image-intake-router-2.0.0/image-intake-router/SKILL.md"
     with tarfile.open(archive, "r:gz") as source:
         members = [
             (member.name, source.extractfile(member).read())
             for member in source.getmembers()
         ]
+    skill_name = next(
+        name for name, _ in members if name.endswith("/image-intake-router/SKILL.md")
+    )
     with tarfile.open(archive, "w:gz") as destination:
         for name, data in members:
             payload = transform(data) if name == skill_name else data
@@ -63,7 +65,7 @@ def _rewrite_skill(
 
 class ReleaseBuildTests(unittest.TestCase):
     def test_read_version_is_exact(self) -> None:
-        self.assertEqual(read_version(ROOT), "2.0.0")
+        self.assertEqual(read_version(ROOT), "2.0.1")
 
     def test_runtime_allowlist_excludes_source_only_files(self) -> None:
         names = {path.as_posix() for path in runtime_members(ROOT)}
@@ -111,7 +113,7 @@ class ReleaseBuildTests(unittest.TestCase):
     def test_build_has_fixed_name_root_and_checksum(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             archive, checksum = build_release(ROOT, Path(directory))
-            self.assertEqual(archive.name, "image-intake-router-2.0.0.tgz")
+            self.assertEqual(archive.name, "image-intake-router-2.0.1.tgz")
             self.assertEqual(checksum.name, archive.name + ".sha256")
             first_archive_bytes = archive.read_bytes()
             second_archive, second_checksum = build_release(ROOT, Path(directory))
@@ -123,7 +125,7 @@ class ReleaseBuildTests(unittest.TestCase):
                 members = tar.getmembers()
                 payloads = [tar.extractfile(member).read() for member in members]
             names = [member.name for member in members]
-            prefix = "image-intake-router-2.0.0"
+            prefix = "image-intake-router-2.0.1"
             expected_names = [f"{prefix}/{path.as_posix()}" for path in runtime_members(ROOT)]
             self.assertEqual(names, expected_names)
             self.assertEqual(names, sorted(names))
@@ -194,13 +196,13 @@ class ReleaseBuildTests(unittest.TestCase):
     def test_requested_version_must_match_version_file(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             with self.assertRaisesRegex(ValueError, "does not match VERSION"):
-                build_release(ROOT, Path(directory), requested_version="2.0.1")
+                build_release(ROOT, Path(directory), requested_version="2.0.0")
 
     def test_verified_archive_installs_without_source_tree(self) -> None:
         with tempfile.TemporaryDirectory() as output, tempfile.TemporaryDirectory() as install:
             archive, checksum = build_release(ROOT, Path(output))
             report = verify_release(archive, checksum, Path(install))
-            self.assertEqual(report.version, "2.0.0")
+            self.assertEqual(report.version, "2.0.1")
             self.assertTrue((report.installed_skill / "SKILL.md").is_file())
             self.assertTrue(
                 (report.installed_skill / "templates/image-intake-router.schema.json").is_file()
