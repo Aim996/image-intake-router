@@ -13,6 +13,31 @@ from scripts.build_release import build_release, read_version, runtime_members
 from scripts.verify_release import verify_release
 
 ROOT = Path(__file__).resolve().parents[1]
+RELEASE_MEMBER_NAMES = (
+    "CHANGELOG.md",
+    "LICENSE",
+    "README.md",
+    "VERSION",
+    "docs/AI-PROMPTS.md",
+    "docs/INSTALL.md",
+    "docs/UPGRADING.md",
+    "image-intake-router/SKILL.md",
+    "image-intake-router/references/calculation-rules.md",
+    "image-intake-router/references/confirmation-and-execution.md",
+    "image-intake-router/references/failure-recovery.md",
+    "image-intake-router/references/output-contract.md",
+    "image-intake-router/references/projection-contracts.md",
+    "image-intake-router/references/recognition-rules.md",
+    "image-intake-router/templates/image-intake-router.schema.json",
+)
+
+
+def _write_release_root(root: Path, newline: str) -> None:
+    for name in RELEASE_MEMBER_NAMES:
+        path = root / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        text = "2.0.0\n" if name == "VERSION" else "alpha\nbeta\n"
+        path.write_bytes(text.replace("\n", newline).encode("utf-8"))
 
 
 def _rewrite_skill(
@@ -61,6 +86,28 @@ class ReleaseBuildTests(unittest.TestCase):
             }.issubset(names)
         )
 
+    def test_build_is_independent_of_source_text_line_endings(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            temporary = Path(directory)
+            lf_root = temporary / "lf-root"
+            crlf_root = temporary / "crlf-root"
+            cr_root = temporary / "cr-root"
+            _write_release_root(lf_root, "\n")
+            _write_release_root(crlf_root, "\r\n")
+            _write_release_root(cr_root, "\r")
+
+            lf_archive, _ = build_release(lf_root, temporary / "lf-output")
+            crlf_archive, _ = build_release(crlf_root, temporary / "crlf-output")
+            cr_archive, _ = build_release(cr_root, temporary / "cr-output")
+
+            self.assertEqual(crlf_archive.read_bytes(), lf_archive.read_bytes())
+            self.assertEqual(cr_archive.read_bytes(), lf_archive.read_bytes())
+            with tarfile.open(lf_archive, "r:gz") as tar:
+                for name in RELEASE_MEMBER_NAMES:
+                    payload = tar.extractfile(f"image-intake-router-2.0.0/{name}").read()
+                    expected = b"2.0.0\n" if name == "VERSION" else b"alpha\nbeta\n"
+                    self.assertEqual(payload, expected)
+
     def test_build_has_fixed_name_root_and_checksum(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             archive, checksum = build_release(ROOT, Path(directory))
@@ -74,6 +121,7 @@ class ReleaseBuildTests(unittest.TestCase):
             self.assertEqual(checksum.read_text(encoding="utf-8"), f"{digest}  {archive.name}\n")
             with tarfile.open(archive, "r:gz") as tar:
                 members = tar.getmembers()
+                payloads = [tar.extractfile(member).read() for member in members]
             names = [member.name for member in members]
             prefix = "image-intake-router-2.0.0"
             expected_names = [f"{prefix}/{path.as_posix()}" for path in runtime_members(ROOT)]
@@ -97,6 +145,31 @@ class ReleaseBuildTests(unittest.TestCase):
             for member in members:
                 self.assertEqual((member.uid, member.gid, member.mtime), (0, 0, 0))
                 self.assertEqual((member.uname, member.gname, member.mode), ("root", "root", 0o644))
+            for payload in payloads:
+                payload.decode("utf-8")
+                self.assertNotIn(b"\r\n", payload)
+                self.assertNotIn(b"\r", payload)
+
+    def test_non_utf8_allowlist_file_does_not_overwrite_existing_release_assets(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            temporary = Path(directory)
+            fixture_root = temporary / "fixture"
+            _write_release_root(fixture_root, "\n")
+            (fixture_root / "README.md").write_bytes(b"\xff")
+            output_dir = temporary / "output"
+            output_dir.mkdir()
+            archive = output_dir / "image-intake-router-2.0.0.tgz"
+            checksum = output_dir / f"{archive.name}.sha256"
+            original_archive = b"existing archive"
+            original_checksum = "existing checksum\n"
+            archive.write_bytes(original_archive)
+            checksum.write_text(original_checksum, encoding="utf-8", newline="\n")
+
+            with self.assertRaisesRegex(ValueError, "release file must be UTF-8: README.md"):
+                build_release(fixture_root, output_dir)
+
+            self.assertEqual(archive.read_bytes(), original_archive)
+            self.assertEqual(checksum.read_text(encoding="utf-8"), original_checksum)
 
     def test_missing_allowlist_file_does_not_overwrite_existing_release_assets(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

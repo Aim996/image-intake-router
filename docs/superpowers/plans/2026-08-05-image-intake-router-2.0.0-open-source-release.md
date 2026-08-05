@@ -361,6 +361,14 @@ def runtime_members(root: Path) -> tuple[Path, ...]:
     return members
 
 
+def _canonical_text_bytes(root: Path, relative: Path) -> bytes:
+    try:
+        text = (root / relative).read_bytes().decode("utf-8")
+    except UnicodeDecodeError as error:
+        raise ValueError(f"release file must be UTF-8: {relative.as_posix()}") from error
+    return text.replace("\r\n", "\n").replace("\r", "\n").encode("utf-8")
+
+
 def build_release(
     root: Path,
     output_dir: Path,
@@ -371,6 +379,8 @@ def build_release(
     if requested_version is not None and requested_version != version:
         raise ValueError(f"requested version {requested_version} does not match VERSION {version}")
 
+    members = runtime_members(root)
+    payloads = tuple((relative, _canonical_text_bytes(root, relative)) for relative in members)
     output_dir.mkdir(parents=True, exist_ok=True)
     archive = output_dir / f"{PROJECT_NAME}-{version}.tgz"
     checksum = output_dir / f"{archive.name}.sha256"
@@ -379,8 +389,7 @@ def build_release(
     with archive.open("wb") as raw:
         with gzip.GzipFile(fileobj=raw, mode="wb", filename="", mtime=0) as gzip_file:
             with tarfile.open(fileobj=gzip_file, mode="w") as tar:
-                for relative in runtime_members(root):
-                    data = (root / relative).read_bytes()
+                for relative, data in payloads:
                     info = tarfile.TarInfo(f"{prefix}/{relative.as_posix()}")
                     info.size = len(data)
                     info.uid = info.gid = 0
@@ -398,7 +407,7 @@ def build_release(
 
 - [ ] **Step 4: Implement deterministic tar and SHA-256 generation**
 
-The implementation above writes files in sorted archive-name order. Keep these normalized `TarInfo` values as a tested contract:
+The implementation above first reads every explicitly allowlisted file as strict UTF-8 text, canonicalizes CRLF and lone CR to LF bytes in memory without modifying the working tree, and then writes those bytes in sorted archive-name order. This makes archive bytes independent of Git configuration and checkout-specific line endings. Keep these normalized `TarInfo` values as a tested contract:
 
 ```python
 info.uid = 0
