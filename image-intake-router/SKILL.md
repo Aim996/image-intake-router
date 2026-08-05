@@ -5,6 +5,7 @@ user-invocable: true
 metadata:
   openclaw:
     emoji: "📷"
+    version: 2.0.0
 ---
 
 # 图片识别路由器
