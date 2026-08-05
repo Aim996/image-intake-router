@@ -1,4 +1,3 @@
-import gzip
 import hashlib
 import io
 import shutil
@@ -40,9 +39,10 @@ def _write_release_root(root: Path, newline: str) -> None:
         path.write_bytes(text.replace("\n", newline).encode("utf-8"))
 
 
-def _rewrite_skill(
+def _rewrite_member(
     archive: Path,
     checksum: Path,
+    member_name: str,
     transform: Callable[[bytes], bytes],
 ) -> None:
     with tarfile.open(archive, "r:gz") as source:
@@ -50,15 +50,44 @@ def _rewrite_skill(
             (member.name, source.extractfile(member).read())
             for member in source.getmembers()
         ]
-    skill_name = next(
-        name for name, _ in members if name.endswith("/image-intake-router/SKILL.md")
-    )
+    if member_name not in {name for name, _ in members}:
+        raise AssertionError(f"archive member not found: {member_name}")
     with tarfile.open(archive, "w:gz") as destination:
         for name, data in members:
-            payload = transform(data) if name == skill_name else data
+            payload = transform(data) if name == member_name else data
             info = tarfile.TarInfo(name)
             info.size = len(payload)
             destination.addfile(info, io.BytesIO(payload))
+    digest = hashlib.sha256(archive.read_bytes()).hexdigest()
+    checksum.write_text(f"{digest}  {archive.name}\n", encoding="utf-8")
+
+
+def _rewrite_skill(
+    archive: Path,
+    checksum: Path,
+    transform: Callable[[bytes], bytes],
+) -> None:
+    root = archive.name.removesuffix(".tgz")
+    _rewrite_member(
+        archive,
+        checksum,
+        f"{root}/image-intake-router/SKILL.md",
+        transform,
+    )
+
+
+def _write_single_member_archive(
+    archive: Path,
+    checksum: Path,
+    member: tarfile.TarInfo,
+    payload: bytes = b"fixture",
+) -> None:
+    with tarfile.open(archive, "w:gz") as tar:
+        if member.isfile():
+            member.size = len(payload)
+            tar.addfile(member, io.BytesIO(payload))
+        else:
+            tar.addfile(member)
     digest = hashlib.sha256(archive.read_bytes()).hexdigest()
     checksum.write_text(f"{digest}  {archive.name}\n", encoding="utf-8")
 
@@ -266,6 +295,25 @@ class ReleaseBuildTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "checksum mismatch"):
                 verify_release(archive, checksum, Path(install))
 
+    def test_archive_version_mismatch_is_rejected_before_install_creation(self) -> None:
+        with tempfile.TemporaryDirectory() as output:
+            archive, checksum = build_release(ROOT, Path(output))
+            root = archive.name.removesuffix(".tgz")
+            _rewrite_member(
+                archive,
+                checksum,
+                f"{root}/VERSION",
+                lambda _: b"9.9.9\n",
+            )
+            install_root = Path(output) / "install-root"
+
+            with self.assertRaisesRegex(
+                ValueError, "archive VERSION does not match filename"
+            ):
+                verify_release(archive, checksum, install_root)
+
+            self.assertFalse(install_root.exists())
+
     def test_path_traversal_member_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as output, tempfile.TemporaryDirectory() as install:
             archive = Path(output) / "image-intake-router-2.0.0.tgz"
@@ -280,6 +328,100 @@ class ReleaseBuildTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "unsafe archive member"):
                 verify_release(archive, checksum, Path(install))
 
+    def test_absolute_member_path_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as output, tempfile.TemporaryDirectory() as install:
+            archive = Path(output) / "image-intake-router-2.0.0.tgz"
+            checksum = Path(output) / f"{archive.name}.sha256"
+            _write_single_member_archive(
+                archive,
+                checksum,
+                tarfile.TarInfo("/image-intake-router-2.0.0/VERSION"),
+            )
+
+            with self.assertRaisesRegex(ValueError, "unsafe archive member"):
+                verify_release(archive, checksum, Path(install))
+
+    def test_symlink_member_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as output, tempfile.TemporaryDirectory() as install:
+            archive = Path(output) / "image-intake-router-2.0.0.tgz"
+            checksum = Path(output) / f"{archive.name}.sha256"
+            member = tarfile.TarInfo("image-intake-router-2.0.0/VERSION")
+            member.type = tarfile.SYMTYPE
+            member.linkname = "../outside"
+            _write_single_member_archive(archive, checksum, member)
+
+            with self.assertRaisesRegex(ValueError, "unsafe archive member type"):
+                verify_release(archive, checksum, Path(install))
+
+    def test_hardlink_member_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as output, tempfile.TemporaryDirectory() as install:
+            archive = Path(output) / "image-intake-router-2.0.0.tgz"
+            checksum = Path(output) / f"{archive.name}.sha256"
+            member = tarfile.TarInfo("image-intake-router-2.0.0/VERSION")
+            member.type = tarfile.LNKTYPE
+            member.linkname = "image-intake-router-2.0.0/README.md"
+            _write_single_member_archive(archive, checksum, member)
+
+            with self.assertRaisesRegex(ValueError, "unsafe archive member type"):
+                verify_release(archive, checksum, Path(install))
+
+    def test_directory_member_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as output, tempfile.TemporaryDirectory() as install:
+            archive = Path(output) / "image-intake-router-2.0.0.tgz"
+            checksum = Path(output) / f"{archive.name}.sha256"
+            member = tarfile.TarInfo("image-intake-router-2.0.0/docs")
+            member.type = tarfile.DIRTYPE
+            _write_single_member_archive(archive, checksum, member)
+
+            with self.assertRaisesRegex(ValueError, "unsafe archive member type"):
+                verify_release(archive, checksum, Path(install))
+
+    def test_nonregular_member_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as output, tempfile.TemporaryDirectory() as install:
+            archive = Path(output) / "image-intake-router-2.0.0.tgz"
+            checksum = Path(output) / f"{archive.name}.sha256"
+            member = tarfile.TarInfo("image-intake-router-2.0.0/VERSION")
+            member.type = tarfile.FIFOTYPE
+            _write_single_member_archive(archive, checksum, member)
+
+            with self.assertRaisesRegex(ValueError, "unsafe archive member type"):
+                verify_release(archive, checksum, Path(install))
+
+    def test_wrong_archive_root_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as output, tempfile.TemporaryDirectory() as install:
+            archive = Path(output) / "image-intake-router-2.0.0.tgz"
+            checksum = Path(output) / f"{archive.name}.sha256"
+            _write_single_member_archive(
+                archive,
+                checksum,
+                tarfile.TarInfo("other-root/VERSION"),
+            )
+
+            with self.assertRaisesRegex(ValueError, "wrong archive root"):
+                verify_release(archive, checksum, Path(install))
+
+    def test_duplicate_archive_member_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as output, tempfile.TemporaryDirectory() as install:
+            archive, checksum = build_release(ROOT, Path(output))
+            with tarfile.open(archive, "r:gz") as source:
+                members = [
+                    (member.name, source.extractfile(member).read())
+                    for member in source.getmembers()
+                ]
+            members.append(members[0])
+            with tarfile.open(archive, "w:gz") as destination:
+                for name, payload in members:
+                    info = tarfile.TarInfo(name)
+                    info.size = len(payload)
+                    destination.addfile(info, io.BytesIO(payload))
+            digest = hashlib.sha256(archive.read_bytes()).hexdigest()
+            checksum.write_text(f"{digest}  {archive.name}\n", encoding="utf-8")
+
+            with self.assertRaisesRegex(
+                ValueError, "archive member set does not match release allowlist"
+            ):
+                verify_release(archive, checksum, Path(install))
+
     def test_missing_or_broken_frontmatter_fence_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as output:
             archive, checksum = build_release(ROOT, Path(output))
@@ -292,6 +434,56 @@ class ReleaseBuildTests(unittest.TestCase):
                 _rewrite_skill(archive, checksum, transform)
                 with tempfile.TemporaryDirectory() as install:
                     with self.assertRaisesRegex(ValueError, "invalid SKILL.md frontmatter"):
+                        verify_release(archive, checksum, Path(install))
+
+    def test_malformed_frontmatter_structure_is_rejected(self) -> None:
+        original = (ROOT / "image-intake-router/SKILL.md").read_bytes()
+        second_fence = original.find(b"---", len(b"---"))
+        cases = {
+            "scalar parent": """name: image-intake-router
+metadata: scalar
+  openclaw:
+    version: 2.0.1""",
+            "duplicate full path": """name: image-intake-router
+name: image-intake-router
+metadata:
+  openclaw:
+    version: 2.0.1""",
+            "tab indentation": """name: image-intake-router
+metadata:
+\topenclaw:
+    version: 2.0.1""",
+            "odd indentation": """name: image-intake-router
+metadata:
+ openclaw:
+   version: 2.0.1""",
+            "skipped indentation level": """name: image-intake-router
+metadata:
+    openclaw:
+      version: 2.0.1""",
+            "illegal key": """name: image-intake-router
+bad.key: value
+metadata:
+  openclaw:
+    version: 2.0.1""",
+            "missing colon": """name: image-intake-router
+invalid line
+metadata:
+  openclaw:
+    version: 2.0.1""",
+        }
+
+        for case, frontmatter in cases.items():
+            with self.subTest(case=case), tempfile.TemporaryDirectory() as output:
+                archive, checksum = build_release(ROOT, Path(output))
+                malformed = (
+                    f"---\n{frontmatter}\n".encode("utf-8") + original[second_fence:]
+                )
+                _rewrite_skill(archive, checksum, lambda _: malformed)
+                with tempfile.TemporaryDirectory() as install:
+                    with self.assertRaisesRegex(
+                        ValueError, "invalid SKILL.md frontmatter"
+                    ):
                         verify_release(archive, checksum, Path(install))
 
     def test_body_forged_frontmatter_fields_are_rejected(self) -> None:

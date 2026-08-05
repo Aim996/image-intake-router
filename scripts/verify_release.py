@@ -80,18 +80,30 @@ def _frontmatter_values(skill_text: str) -> dict[tuple[str, ...], str]:
         raise ValueError("invalid SKILL.md frontmatter")
 
     values: dict[tuple[str, ...], str] = {}
-    stack: list[tuple[int, str]] = []
+    stack: list[tuple[str, bool]] = []
     for line in match.group(1).splitlines():
         if not line.strip() or line.lstrip().startswith("#"):
             continue
-        indent = len(line) - len(line.lstrip(" "))
-        key, separator, value = line.lstrip(" ").partition(":")
-        if not separator or not key:
+        if "\t" in line:
             raise ValueError("invalid SKILL.md frontmatter")
-        while stack and indent <= stack[-1][0]:
-            stack.pop()
-        stack.append((indent, key))
-        values[tuple(name for _, name in stack)] = value.strip()
+        indent = len(line) - len(line.lstrip(" "))
+        if indent % 2:
+            raise ValueError("invalid SKILL.md frontmatter")
+        level = indent // 2
+        if level > len(stack):
+            raise ValueError("invalid SKILL.md frontmatter")
+        stack = stack[:level]
+        if level and not stack[level - 1][1]:
+            raise ValueError("invalid SKILL.md frontmatter")
+        key, separator, value = line[indent:].partition(":")
+        if not separator or re.fullmatch(r"[A-Za-z0-9_-]+", key) is None:
+            raise ValueError("invalid SKILL.md frontmatter")
+        path = tuple(name for name, _ in stack) + (key,)
+        if path in values:
+            raise ValueError("invalid SKILL.md frontmatter")
+        value = value.strip()
+        values[path] = value
+        stack.append((key, not value))
     return values
 
 
@@ -152,7 +164,15 @@ def verify_release(archive: Path, checksum: Path, install_root: Path) -> Verific
         with tarfile.open(archive, "r:gz") as tar:
             members = _validated_members(tar, version)
             _safe_extract(tar, members, extraction_root)
-        source_skill = extraction_root / f"{PROJECT_NAME}-{version}" / PROJECT_NAME
+        archive_root = extraction_root / f"{PROJECT_NAME}-{version}"
+        version_bytes = (archive_root / "VERSION").read_bytes()
+        try:
+            version_bytes.decode("utf-8")
+        except UnicodeDecodeError:
+            raise ValueError("archive VERSION does not match filename") from None
+        if version_bytes != f"{version}\n".encode("utf-8"):
+            raise ValueError("archive VERSION does not match filename")
+        source_skill = archive_root / PROJECT_NAME
         installed_skill = install_root / "skills" / PROJECT_NAME
         installed_skill.parent.mkdir(parents=True, exist_ok=True)
         if installed_skill.exists():
