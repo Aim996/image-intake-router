@@ -23,3 +23,11 @@
 只有带有唯一、直接对应的最终付款标签（如“实付”或“支付金额”）的金额，才能成为订单的 `final_paid_amount`，并可被后续费用投影视为消费金额。若存在多个候选金额、标签不完整、订单身份不明或金额冲突，则 `final_paid_amount` 为未知，并在未解决问题中说明。
 
 原价、小计、优惠、配送费、服务费、退款、退货、红包和其他金额始终是 `auxiliary_amounts` 支持事实，不能替代唯一可信的实付金额。退款等只记录其可见事实和状态；本任务不实现退款记账、净额抵扣或任何账目写入。
+
+## v2.1 unified-fact calculation boundaries
+
+- Preserve purchase count separately from nominal, actual, and billing weight or volume. Preserve the visible display specification and display quantity unit alongside every normalized numeric measurement; an unknown value is `null`, never a synthetic zero or empty string.
+- Any derived value is marked `calculated: true` and carries evidence for every input. Convert L to ml and kg to g only with the exact deterministic scale (1 L = 1000 ml; 1 kg = 1000 g). Do not infer an actual corrected weight merely from a short-weight variance.
+- Refunds remain independent visible facts. Do not net a refund against final paid amount unless the image explicitly defines that relationship.
+- If seven item kinds are visible and two remain hidden, record declared 9, recognized 7, hidden 2, and incomplete content. Do not manufacture hidden-product placeholder rows.
+- Technical adapters may normalize to `g`, `ml`, or `piece`, but they consume the unified business facts and never trigger a second visual read.

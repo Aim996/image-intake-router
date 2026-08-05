@@ -11,12 +11,14 @@
     "facts",
     "expense_projection",
     "diet_projection",
-    "quality"
+    "quality",
+    "recognition_run"
   ],
   "properties": {
-    "schema_version": { "const": "image-intake-router.v2" },
+    "schema_version": { "const": "image-intake-router.v2.1" },
     "preview_state": { "enum": ["draft", "awaiting_confirmation", "executing", "consumed"] },
     "source": { "$ref": "#/$defs/source" },
+    "recognition_run": { "$ref": "#/$defs/recognitionRun" },
     "facts": { "$ref": "#/$defs/facts" },
     "expense_projection": {
       "oneOf": [
@@ -57,6 +59,30 @@
           }
         }
       }
+    },
+    {
+      "if": {
+        "properties": {
+          "recognition_run": {
+            "properties": {
+              "status": { "enum": ["failed", "not_executed"] }
+            },
+            "required": ["status"]
+          }
+        },
+        "required": ["recognition_run"]
+      },
+      "then": {
+        "properties": {
+          "expense_projection": { "type": "null" },
+          "diet_projection": { "type": "null" },
+          "quality": {
+            "properties": {
+              "fact_set_status": { "const": "unavailable" }
+            }
+          }
+        }
+      }
     }
   ],
   "$defs": {
@@ -67,6 +93,30 @@
       "properties": {
         "image_count": { "type": "integer", "minimum": 1 },
         "has_user_text": { "type": "boolean" }
+      }
+    },
+    "recognitionRun": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "method", "attachment_count", "processed_attachment_count", "attachments", "issues"],
+      "properties": {
+        "status": { "enum": ["succeeded", "partial", "failed", "not_executed"] },
+        "method": { "enum": ["native_vision", "media_understanding"] },
+        "attachment_count": { "type": "integer", "minimum": 0, "maximum": 100 },
+        "processed_attachment_count": { "type": "integer", "minimum": 0, "maximum": 100, "description": "Runtime invariant: processed_attachment_count must not exceed attachment_count." },
+        "attachments": { "type": "array", "items": { "$ref": "#/$defs/recognitionAttachment" }, "maxItems": 100 },
+        "issues": { "type": "array", "items": { "type": "string", "minLength": 1, "maxLength": 500 }, "maxItems": 50 }
+      }
+    },
+    "recognitionAttachment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["attachment_index", "status", "completeness", "limitations"],
+      "properties": {
+        "attachment_index": { "type": "integer", "minimum": 0, "maximum": 9999 },
+        "status": { "enum": ["succeeded", "partial", "failed", "not_executed"] },
+        "completeness": { "enum": ["complete", "partial", "unavailable"] },
+        "limitations": { "type": "array", "items": { "type": "string", "minLength": 1, "maxLength": 500 }, "maxItems": 20 }
       }
     },
     "evidenceRecord": {
@@ -91,9 +141,11 @@
     "textFact": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["value", "evidence"],
+      "required": ["value", "confidence", "calculated", "evidence"],
       "properties": {
-        "value": { "type": ["string", "null"], "maxLength": 1000 },
+        "value": { "type": ["string", "null"], "minLength": 1, "maxLength": 1000 },
+        "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+        "calculated": { "type": "boolean" },
         "evidence": {
           "type": "array",
           "items": { "$ref": "#/$defs/evidenceRecord" },
@@ -110,10 +162,12 @@
     "amountFact": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["value", "evidence"],
+      "required": ["value", "confidence", "calculated", "evidence"],
       "properties": {
-        "value": { "type": ["number", "null"], "exclusiveMinimum": 0 },
+        "value": { "type": ["number", "null"], "minimum": 0, "maximum": 9999999999.99 },
         "currency": { "type": ["string", "null"], "pattern": "^[A-Z]{3}$" },
+        "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+        "calculated": { "type": "boolean" },
         "evidence": {
           "type": "array",
           "items": { "$ref": "#/$defs/evidenceRecord" },
@@ -130,10 +184,12 @@
     "quantityFact": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["value", "unit", "evidence"],
+      "required": ["value", "unit", "confidence", "calculated", "evidence"],
       "properties": {
-        "value": { "type": ["number", "null"], "exclusiveMinimum": 0 },
+        "value": { "type": ["number", "null"], "minimum": 0, "maximum": 9999999999.99 },
         "unit": { "type": ["string", "null"], "maxLength": 40 },
+        "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+        "calculated": { "type": "boolean" },
         "evidence": {
           "type": "array",
           "items": { "$ref": "#/$defs/evidenceRecord" },
@@ -147,26 +203,93 @@
         }
       ]
     },
+    "dateFact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["value", "confidence", "calculated", "evidence"],
+      "properties": {
+        "value": { "type": ["string", "null"], "format": "date", "minLength": 10, "maxLength": 40 },
+        "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+        "calculated": { "type": "boolean" },
+        "evidence": { "type": "array", "items": { "$ref": "#/$defs/evidenceRecord" }, "maxItems": 20 }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "value": { "type": "string" } } },
+          "then": { "properties": { "evidence": { "minItems": 1 } } }
+        }
+      ]
+    },
+    "booleanFact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["value", "confidence", "calculated", "evidence"],
+      "properties": {
+        "value": { "type": ["boolean", "null"] },
+        "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+        "calculated": { "type": "boolean" },
+        "evidence": { "type": "array", "items": { "$ref": "#/$defs/evidenceRecord" }, "maxItems": 20 }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "value": { "type": "boolean" } } },
+          "then": { "properties": { "evidence": { "minItems": 1 } } }
+        }
+      ]
+    },
+    "countFact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["value", "confidence", "calculated", "evidence"],
+      "properties": {
+        "value": { "type": ["integer", "null"], "minimum": 0, "maximum": 1000000 },
+        "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+        "calculated": { "type": "boolean" },
+        "evidence": { "type": "array", "items": { "$ref": "#/$defs/evidenceRecord" }, "maxItems": 20 }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "value": { "type": "integer" } } },
+          "then": { "properties": { "evidence": { "minItems": 1 } } }
+        }
+      ]
+    },
     "orderFacts": {
       "type": "object",
       "additionalProperties": false,
       "required": [
         "merchant",
         "transaction_time",
-        "final_paid_amount",
         "order_status",
-        "auxiliary_amounts"
+        "goods_subtotal",
+        "activity_discount",
+        "coupon_discount",
+        "packaging_fee",
+        "delivery_fee",
+        "final_paid_amount",
+        "refund_total",
+        "declared_item_kind_count",
+        "recognized_item_kind_count",
+        "hidden_item_kind_count",
+        "has_unexpanded_items",
+        "content_complete"
       ],
       "properties": {
         "merchant": { "$ref": "#/$defs/textFact" },
         "transaction_time": { "$ref": "#/$defs/textFact" },
-        "final_paid_amount": { "$ref": "#/$defs/amountFact" },
         "order_status": { "$ref": "#/$defs/textFact" },
-        "auxiliary_amounts": {
-          "type": "array",
-          "items": { "$ref": "#/$defs/auxiliaryAmount" },
-          "maxItems": 30
-        }
+        "goods_subtotal": { "$ref": "#/$defs/amountFact" },
+        "activity_discount": { "$ref": "#/$defs/amountFact" },
+        "coupon_discount": { "$ref": "#/$defs/amountFact" },
+        "packaging_fee": { "$ref": "#/$defs/amountFact" },
+        "delivery_fee": { "$ref": "#/$defs/amountFact" },
+        "final_paid_amount": { "$ref": "#/$defs/amountFact" },
+        "refund_total": { "$ref": "#/$defs/amountFact" },
+        "declared_item_kind_count": { "$ref": "#/$defs/countFact" },
+        "recognized_item_kind_count": { "$ref": "#/$defs/countFact" },
+        "hidden_item_kind_count": { "$ref": "#/$defs/countFact" },
+        "has_unexpanded_items": { "$ref": "#/$defs/booleanFact" },
+        "content_complete": { "$ref": "#/$defs/booleanFact" }
       }
     },
     "auxiliaryAmount": {
@@ -214,15 +337,84 @@
         }
       }
     },
+    "productFacts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "full_name", "normalized_name", "specification", "purchase_quantity", "quantity_unit",
+        "nominal_weight_or_volume", "actual_weight_or_volume", "billing_weight", "weight_variance",
+        "original_amount", "unit_price", "line_paid_amount", "refund_amount", "production_date",
+        "line_status", "item_type", "visibility_status"
+      ],
+      "properties": {
+        "full_name": { "$ref": "#/$defs/textFact" },
+        "normalized_name": { "$ref": "#/$defs/textFact" },
+        "specification": { "$ref": "#/$defs/textFact" },
+        "purchase_quantity": { "$ref": "#/$defs/quantityFact" },
+        "quantity_unit": { "$ref": "#/$defs/textFact" },
+        "nominal_weight_or_volume": { "$ref": "#/$defs/quantityFact" },
+        "actual_weight_or_volume": { "$ref": "#/$defs/quantityFact" },
+        "billing_weight": { "$ref": "#/$defs/quantityFact" },
+        "weight_variance": { "$ref": "#/$defs/quantityFact" },
+        "original_amount": { "$ref": "#/$defs/amountFact" },
+        "unit_price": { "$ref": "#/$defs/amountFact" },
+        "line_paid_amount": { "$ref": "#/$defs/amountFact" },
+        "refund_amount": { "$ref": "#/$defs/amountFact" },
+        "production_date": { "$ref": "#/$defs/dateFact" },
+        "line_status": { "$ref": "#/$defs/textFact" },
+        "item_type": { "$ref": "#/$defs/textFact" },
+        "visibility_status": { "$ref": "#/$defs/textFact" }
+      }
+    },
+    "fieldMetadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["confidence", "calculated", "evidence"],
+      "properties": {
+        "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+        "calculated": { "type": "boolean" },
+        "evidence": { "type": "array", "items": { "$ref": "#/$defs/evidenceRecord" }, "maxItems": 20 }
+      }
+    },
+    "expenseLineItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "full_name", "normalized_name", "specification", "purchase_quantity", "quantity_unit",
+        "nominal_weight_or_volume", "actual_weight_or_volume", "billing_weight", "weight_variance",
+        "original_amount", "unit_price", "line_paid_amount", "refund_amount", "production_date",
+        "line_status", "item_type", "visibility_status", "field_metadata"
+      ],
+      "properties": {
+        "full_name": { "$ref": "#/$defs/textFact" },
+        "normalized_name": { "$ref": "#/$defs/textFact" },
+        "specification": { "$ref": "#/$defs/textFact" },
+        "purchase_quantity": { "$ref": "#/$defs/quantityFact" },
+        "quantity_unit": { "$ref": "#/$defs/textFact" },
+        "nominal_weight_or_volume": { "$ref": "#/$defs/quantityFact" },
+        "actual_weight_or_volume": { "$ref": "#/$defs/quantityFact" },
+        "billing_weight": { "$ref": "#/$defs/quantityFact" },
+        "weight_variance": { "$ref": "#/$defs/quantityFact" },
+        "original_amount": { "$ref": "#/$defs/amountFact" },
+        "unit_price": { "$ref": "#/$defs/amountFact" },
+        "line_paid_amount": { "$ref": "#/$defs/amountFact" },
+        "refund_amount": { "$ref": "#/$defs/amountFact" },
+        "production_date": { "$ref": "#/$defs/dateFact" },
+        "line_status": { "$ref": "#/$defs/textFact" },
+        "item_type": { "$ref": "#/$defs/textFact" },
+        "visibility_status": { "$ref": "#/$defs/textFact" },
+        "field_metadata": { "$ref": "#/$defs/fieldMetadata" }
+      }
+    },
     "facts": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["order", "items", "unresolved_issues"],
+      "required": ["order", "products"],
       "properties": {
         "order": { "$ref": "#/$defs/orderFacts" },
-        "items": {
+        "products": {
           "type": "array",
-          "items": { "$ref": "#/$defs/itemFact" },
+          "items": { "$ref": "#/$defs/productFacts" },
           "maxItems": 100
         },
         "unresolved_issues": {
@@ -262,7 +454,10 @@
           "type": "array",
           "items": { "type": "string", "minLength": 1, "maxLength": 500 },
           "maxItems": 50
-        }
+        },
+        "line_items": { "type": "array", "items": { "$ref": "#/$defs/expenseLineItem" }, "maxItems": 100 },
+        "detail_completeness": { "enum": ["complete", "partial", "unavailable"] },
+        "omitted_item_count": { "type": "integer", "minimum": 0, "maximum": 1000000 }
       },
       "allOf": [
         {
@@ -435,6 +630,18 @@
         }
       }
     },
+    "dietAdapterPayloadItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source_product_index", "quantity", "unit", "display_quantity", "display_unit"],
+      "properties": {
+        "source_product_index": { "type": "integer", "minimum": 0, "maximum": 999999 },
+        "quantity": { "type": "number", "minimum": 0, "maximum": 9999999999.99 },
+        "unit": { "enum": ["g", "ml", "piece"] },
+        "display_quantity": { "type": ["number", "null"], "minimum": 0, "maximum": 9999999999.99 },
+        "display_unit": { "type": ["string", "null"], "maxLength": 40 }
+      }
+    },
     "dietProjection": {
       "type": "object",
       "additionalProperties": false,
@@ -459,7 +666,10 @@
           "type": "array",
           "items": { "$ref": "#/$defs/uncertainItem" },
           "maxItems": 100
-        }
+        },
+        "executable": { "type": "boolean" },
+        "business_products": { "type": "array", "items": { "$ref": "#/$defs/productFacts" }, "maxItems": 100 },
+        "adapter_payload": { "type": "array", "items": { "$ref": "#/$defs/dietAdapterPayloadItem" }, "maxItems": 100 }
       }
     },
     "quality": {
