@@ -58,6 +58,27 @@ class ProductContractTests(unittest.TestCase):
         self.assertNotIn("exact user-visible tokens byte-for-byte", content)
         self.assertNotIn("Use this literal reply skeleton", content)
 
+    def test_output_contract_gives_approved_chinese_examples_and_scope_mappings(self) -> None:
+        content = self.read(REFERENCES / "output-contract.md")
+        self.assertIn(
+            "识别到本单实付 ¥65.48，共至少 9 种商品；图片完整展示了 7 种，另外 2 种未展开。"
+            "准备记账 ¥65.48，并将 7 种可见食品交给食序管家，是否确认？",
+            content,
+        )
+        self.assertIn(
+            "已记账 ¥65.48，完整保存了 7 种可见商品的名称、重量、数量和价格；"
+            "食序管家成功入库 6 种，1 种因数量不明确未提交。",
+            content,
+        )
+        for mapping in [
+            "`确认`/`可以`/`就这样` => all executable scopes",
+            "`只记账` => expense only",
+            "`只入库` => diet only",
+        ]:
+            self.assertIn(mapping, content)
+        self.assertIn("A question is not confirmation", content)
+        self.assertIn("A changed digest produces a new concise preview", content)
+
     def test_projection_contract_preserves_order_detail_and_dual_projection_boundary(self) -> None:
         content = self.read(REFERENCES / "projection-contracts.md")
         for phrase in [
@@ -73,6 +94,9 @@ class ProductContractTests(unittest.TestCase):
             "Unknown expiry adapts to the installed public schema",
         ]:
             self.assertIn(phrase, content)
+        self.assertIn("`约 2.1 kg × 1粒`", content)
+        self.assertNotIn("`约 2.1 kg × 1袋`", content)
+        self.assertIn("`2100 g` or `piece`", content)
 
     def test_confirmation_uses_a_business_digest_and_one_later_confirmation(self) -> None:
         content = self.read(REFERENCES / "confirmation-and-execution.md")

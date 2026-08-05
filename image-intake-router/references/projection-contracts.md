@@ -108,7 +108,7 @@ Refund and short-weight facts remain in order/product facts and `line_items`. Do
 
 `business_products` preserves source business facts and display semantics. `adapter_payload` contains deterministic technical normalization. `items` is the final strict public `diet_pantry.add` payload. Only clearly food + purchased + received rows enter `items`; hidden rows never do.
 
-Preserve the original display fact, such as `约 2.1 kg × 1袋`, in business facts even if the adapter uses `2100 g` or `piece`. Deterministic conversion is adapter-only: kg→g and L→ml use exact conversion without changing the digest. Unknown expiry adapts to the installed public schema; use its documented null or omission form and never invent a date.
+Preserve the original display fact, such as `约 2.1 kg × 1粒`, in business facts even if the adapter uses `2100 g` or `piece`. Do not invent a container such as `袋` or `盒`: the display unit remains part of the business digest. Deterministic conversion is adapter-only: kg→g and L→ml use exact conversion without changing the digest. Unknown expiry adapts to the installed public schema; use its documented null or omission form and never invent a date.
 
 ### Visible completeness
 
