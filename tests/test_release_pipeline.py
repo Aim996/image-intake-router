@@ -174,6 +174,7 @@ class ReleaseBuildTests(unittest.TestCase):
                 },
             )
             self.assertNotIn(f"{prefix}/image-intake-router/tests/test_static_contract.py", names)
+            self.assertNotIn(f"{prefix}/requirements-test.txt", names)
             self.assertFalse(any(name.startswith(f"{prefix}/scripts/") for name in names))
             self.assertFalse(any(name.startswith(f"{prefix}/.github/") for name in names))
             for member in members:

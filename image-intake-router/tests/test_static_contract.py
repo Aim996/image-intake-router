@@ -678,7 +678,8 @@ class RouterV21ProtocolContractTests(unittest.TestCase):
             self.assertFalse(product[field]["calculated"])
             self.assertEqual(product[field]["evidence"], [])
 
-        self.assertEqual(partial["recognition_run"]["status"], "succeeded")
+        self.assertEqual(partial["recognition_run"]["status"], "partial")
+        self.assertEqual(partial["recognition_run"]["attachments"][0]["status"], "partial")
         self.assertEqual(partial["recognition_run"]["attachment_count"], 1)
         self.assertEqual(partial["facts"]["order"]["final_paid_amount"]["value"], 65.48)
         expected_rows = [

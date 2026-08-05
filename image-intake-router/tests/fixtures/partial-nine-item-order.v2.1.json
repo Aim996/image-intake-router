@@ -6,14 +6,14 @@
     "has_user_text": false
   },
   "recognition_run": {
-    "status": "succeeded",
+    "status": "partial",
     "method": "native_vision",
     "attachment_count": 1,
     "processed_attachment_count": 1,
     "attachments": [
       {
         "attachment_index": 0,
-        "status": "succeeded",
+        "status": "partial",
         "completeness": "partial",
         "limitations": [
           "two item kinds are collapsed"
@@ -1665,6 +1665,185 @@
   },
   "diet_projection": {
     "executable": true,
+    "items": [
+      {
+        "action": "add",
+        "food_name": "甜玉米",
+        "normalized_name": "甜玉米",
+        "quantity": 1700,
+        "unit": "g",
+        "source_text": "订单截图：甜玉米 约850 g × 2，已收货",
+        "expires_at": null
+      },
+      {
+        "action": "add",
+        "food_name": "鲜牛奶",
+        "normalized_name": "鲜牛奶",
+        "quantity": 1500,
+        "unit": "ml",
+        "source_text": "订单截图：鲜牛奶 1.5 L × 1，已收货",
+        "expires_at": null
+      },
+      {
+        "action": "add",
+        "food_name": "黄瓜",
+        "normalized_name": "黄瓜",
+        "quantity": 700,
+        "unit": "g",
+        "source_text": "订单截图：黄瓜 约700 g × 1，已收货",
+        "expires_at": null
+      },
+      {
+        "action": "add",
+        "food_name": "西兰花",
+        "normalized_name": "西兰花",
+        "quantity": 600,
+        "unit": "g",
+        "source_text": "订单截图：西兰花 约600 g × 1，已收货",
+        "expires_at": null
+      },
+      {
+        "action": "add",
+        "food_name": "豆浆",
+        "normalized_name": "豆浆",
+        "quantity": 2000,
+        "unit": "ml",
+        "source_text": "订单截图：豆浆 1 L × 2，已收货",
+        "expires_at": null
+      },
+      {
+        "action": "add",
+        "food_name": "云南生菜",
+        "normalized_name": "云南生菜",
+        "quantity": 500,
+        "unit": "g",
+        "source_text": "订单截图：云南生菜 约500 g × 1，已收货",
+        "expires_at": null
+      },
+      {
+        "action": "add",
+        "food_name": "香蕉",
+        "normalized_name": "香蕉",
+        "quantity": 800,
+        "unit": "g",
+        "source_text": "订单截图：香蕉 约800 g × 1，已收货",
+        "expires_at": null
+      }
+    ],
+    "item_audit": [
+      {
+        "item_index": 0,
+        "order_status": "purchased_and_received",
+        "evidence": [
+          {
+            "source": "visible_label",
+            "value": "甜玉米"
+          },
+          {
+            "source": "visible_label",
+            "value": "purchased_and_received"
+          }
+        ]
+      },
+      {
+        "item_index": 1,
+        "order_status": "purchased_and_received",
+        "evidence": [
+          {
+            "source": "visible_label",
+            "value": "鲜牛奶"
+          },
+          {
+            "source": "visible_label",
+            "value": "purchased_and_received"
+          }
+        ]
+      },
+      {
+        "item_index": 2,
+        "order_status": "purchased_and_received",
+        "evidence": [
+          {
+            "source": "visible_label",
+            "value": "黄瓜"
+          },
+          {
+            "source": "visible_label",
+            "value": "purchased_and_received"
+          }
+        ]
+      },
+      {
+        "item_index": 3,
+        "order_status": "purchased_and_received",
+        "evidence": [
+          {
+            "source": "visible_label",
+            "value": "西兰花"
+          },
+          {
+            "source": "visible_label",
+            "value": "purchased_and_received"
+          }
+        ]
+      },
+      {
+        "item_index": 4,
+        "order_status": "purchased_and_received",
+        "evidence": [
+          {
+            "source": "visible_label",
+            "value": "豆浆"
+          },
+          {
+            "source": "visible_label",
+            "value": "purchased_and_received"
+          }
+        ]
+      },
+      {
+        "item_index": 5,
+        "order_status": "purchased_and_received",
+        "evidence": [
+          {
+            "source": "visible_label",
+            "value": "云南生菜"
+          },
+          {
+            "source": "visible_label",
+            "value": "purchased_and_received"
+          }
+        ]
+      },
+      {
+        "item_index": 6,
+        "order_status": "purchased_and_received",
+        "evidence": [
+          {
+            "source": "visible_label",
+            "value": "香蕉"
+          },
+          {
+            "source": "visible_label",
+            "value": "purchased_and_received"
+          }
+        ]
+      }
+    ],
+    "excluded_items": [],
+    "uncertain_items": [
+      {
+        "item_name": "未展开商品（2种）",
+        "status": "unexpanded",
+        "reason": "截图仅显示还有2种商品，名称、数量和规格未展开，未作猜测且不提交入库。",
+        "evidence": [
+          {
+            "source": "visible_label",
+            "value": "还有2种商品"
+          }
+        ]
+      }
+    ],
     "business_products": [
       {
         "full_name": {

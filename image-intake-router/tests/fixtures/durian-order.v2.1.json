@@ -432,6 +432,34 @@
   },
   "diet_projection": {
     "executable": true,
+    "items": [
+      {
+        "action": "add",
+        "food_name": "金枕榴莲",
+        "normalized_name": "榴莲",
+        "quantity": 2100,
+        "unit": "g",
+        "display_quantity": 1,
+        "display_unit": "粒",
+        "base_quantity_per_display_unit": 2100,
+        "source_text": "订单截图：金枕榴莲 约2.1kg × 1粒，已收货",
+        "expires_at": null
+      }
+    ],
+    "item_audit": [
+      {
+        "item_index": 0,
+        "order_status": "purchased_and_received",
+        "evidence": [
+          {
+            "source": "visible_label",
+            "value": "purchased_and_received"
+          }
+        ]
+      }
+    ],
+    "excluded_items": [],
+    "uncertain_items": [],
     "business_products": [
       {
         "full_name": {
