@@ -308,7 +308,9 @@ class RouterV21ProtocolContractTests(unittest.TestCase):
         self.assertEqual(durian["recognition_run"]["status"], "succeeded")
         self.assertEqual(durian["recognition_run"]["attachment_count"], 1)
         self.assertEqual(durian["recognition_run"]["processed_attachment_count"], 1)
+        self.assertEqual(set(durian["facts"]["order"]), ORDER_FACT_KEYS)
         product = durian["facts"]["products"][0]
+        self.assertEqual(set(product), PRODUCT_FACT_KEYS)
         self.assertEqual(product["full_name"]["value"], "金枕榴莲")
         self.assertEqual(product["normalized_name"]["value"], "榴莲")
         self.assertEqual(product["specification"]["value"], "约2.1kg × 1粒")
@@ -326,11 +328,20 @@ class RouterV21ProtocolContractTests(unittest.TestCase):
         self.assertEqual(product["line_status"]["value"], "purchased_and_received")
         self.assertTrue({"confidence", "calculated", "evidence"}.issubset(product["full_name"]))
         self.assertNotIn("盒", json.dumps(durian, ensure_ascii=False))
-        self.assertEqual(durian["expense_projection"]["line_items"][0]["line_paid_amount"]["value"], 119.00)
+        durian_expense_line = durian["expense_projection"]["line_items"][0]
+        self.assertEqual(set(durian_expense_line) - {"field_metadata"}, PRODUCT_FACT_KEYS)
+        self.assertTrue({"confidence", "calculated", "evidence"}.issubset(durian_expense_line["field_metadata"]))
+        self.assertEqual(durian_expense_line["line_paid_amount"]["value"], 119.00)
         business_product = durian["diet_projection"]["business_products"][0]
+        self.assertEqual(set(business_product), PRODUCT_FACT_KEYS)
         self.assertEqual(business_product["nominal_weight_or_volume"]["value"], 2.1)
         self.assertEqual(business_product["purchase_quantity"]["value"], 1)
         self.assertEqual(business_product["quantity_unit"]["value"], "粒")
+        for field in ["actual_weight_or_volume", "billing_weight", "original_amount", "unit_price", "production_date"]:
+            self.assertIsNone(product[field]["value"])
+            self.assertEqual(product[field]["confidence"], 0)
+            self.assertFalse(product[field]["calculated"])
+            self.assertEqual(product[field]["evidence"], [])
 
         self.assertEqual(partial["recognition_run"]["status"], "succeeded")
         self.assertEqual(partial["recognition_run"]["attachment_count"], 1)
@@ -374,19 +385,6 @@ class RouterV21ProtocolContractTests(unittest.TestCase):
             self.assertEqual(fixture["source"], {"image_count": 1, "has_user_text": False})
             self.assertEqual(fixture["quality"]["visual_capability"], "available")
             self.assertNotIn("attachment_context", json.dumps(fixture, ensure_ascii=False))
-
-    def test_failed_and_not_executed_literal_outputs_are_fail_closed(self) -> None:
-        for status in ["failed", "not_executed"]:
-            output = {
-                "recognition_run": {"status": status},
-                "expense_projection": None,
-                "diet_projection": None,
-                "quality": {"fact_set_status": "unavailable"},
-            }
-            self.assertEqual(output["recognition_run"]["status"], status)
-            self.assertIsNone(output["expense_projection"])
-            self.assertIsNone(output["diet_projection"])
-            self.assertEqual(output["quality"]["fact_set_status"], "unavailable")
 
 
 if __name__ == "__main__":
