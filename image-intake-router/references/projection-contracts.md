@@ -5,7 +5,7 @@
 
 ## `expense_projection`
 
-费用投影是严格对象，且**只能**有以下八个字段，顺序为：
+费用投影是严格对象，且**只能**有以下十一个字段，顺序为：
 
 1. `executable`：布尔值。
 2. `amount`：正的人民币元数值，或 `null`。
@@ -15,6 +15,9 @@
 6. `merchant`：商家名，或 `null`。
 7. `note`：商品备注，或 `null`；最长 1000 个字符。
 8. `issues`：未解决问题的字符串数组。
+9. `line_items`：可见商品的 v0.3 结构化事实快照数组。
+10. `detail_completeness`：`complete`、`partial` 或 `unavailable`。
+11. `omitted_item_count`：未包含在 `line_items` 中、但已知存在的商品种类数。
 
 `executable: true` 时，`amount`、`category_id` 与 `occurred_at` 必须非空；执行器以
 `expense_entry(action="create")` 提交它们和恒定的 `source_kind: "image"`。只有
@@ -25,10 +28,14 @@
 必须是 20 到 40 个字符的带时区 ISO 8601 时间；这两个边界在基础投影和可执行分支都必须
 保持一致。
 
+`expense_projection` 是路由器预览对象，不等于下游公开账本写入 payload。执行 `expense_entry(action="create")` 时，公开参数仍只有 `amount`、`category_id`、`occurred_at`、恒定的 `source_kind: "image"`，以及非空时的 `merchant` 和 `note`。绝不把 `executable`、`detail_completeness`、`omitted_item_count` 或 `issues` 作为账本参数；`line_items` 同样是路由器的 v0.3 结构化预览数据，不是账本参数。
+
 一张票据或一笔订单只产生一笔费用投影，绝不按商品拆账。若存在可识别的实际购买商品，
-`note` 必须列出所有这些商品名称，包括非食品；它不是单品价目表。只有带唯一、直接的
+`note` 是面向人的简短摘要，在长度允许时列出商品名称（包括非食品），但从不作为完整单品清单或价目表。只有带唯一、直接的
 最终实付标签的金额可填入 `amount`；原价、小计、优惠、运费、服务费、退款或其他辅助
 金额绝不能替代它。
+
+`line_items` 保留每个可见商品的结构化业务事实，独立于最长 1000 字符、面向人的 `note`；`note` 截断或概括时不得删除 `line_items` 的可见事实。`detail_completeness: "complete"` 仅表示商品明细完整且 `omitted_item_count` 为 0；`"partial"` 表示只路由可见明细，并把已知未展开、隐藏或裁切的商品种类计入 `omitted_item_count`；`"unavailable"` 表示没有可安全路由的商品明细。`omitted_item_count` 只计数已知遗漏，未知数目不得伪造为完整。
 
 `executable: false` 时，`amount`、`category_id`、`occurred_at`、`merchant` 与 `note`
 均为 `null`，并且 `issues` 至少包含一个面向人的不执行原因。`source_kind` 仍是
@@ -38,6 +45,8 @@
 
 饮食投影是严格对象，必有 `items`、`item_audit`、`excluded_items` 与 `uncertain_items` 四个数组。
 空数组是有效结果；没有 `items` 即没有可提交的入库写入。
+
+`business_products` 保留统一的业务商品事实，`adapter_payload` 则是独立的技术归一化输入；两者都不替换原始 `facts`，也不替换传给下游公开工具的 `items` 写入 payload。
 
 `items` 的每个元素就是一个严格的 `diet_pantry(action="add")` 公开参数对象，而不是
 路由器私有的中间格式。它只可使用下列、已经由下游公开 Schema 声明的字段：
