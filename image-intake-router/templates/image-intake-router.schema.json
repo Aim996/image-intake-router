@@ -91,33 +91,103 @@
       "additionalProperties": false,
       "required": ["image_count", "has_user_text"],
       "properties": {
-        "image_count": { "type": "integer", "minimum": 1 },
+        "image_count": { "type": "integer", "minimum": 1, "maximum": 100 },
         "has_user_text": { "type": "boolean" }
       }
     },
     "recognitionRun": {
       "type": "object",
       "additionalProperties": false,
+      "description": "Mandatory pre-projection runtime validation: attachment_count equals source.image_count and attachments.length; attachments contain exactly one record for each unique contiguous attachment_index from 0 through attachment_count - 1; processed_attachment_count is derived from records that entered visual capability (all statuses except not_executed) and must not exceed attachment_count. Fail closed before any projection when any invariant is violated.",
       "required": ["status", "method", "attachment_count", "processed_attachment_count", "attachments", "issues"],
       "properties": {
         "status": { "enum": ["succeeded", "partial", "failed", "not_executed"] },
         "method": { "enum": ["native_vision", "media_understanding"] },
-        "attachment_count": { "type": "integer", "minimum": 0, "maximum": 100 },
-        "processed_attachment_count": { "type": "integer", "minimum": 0, "maximum": 100, "description": "Runtime invariant: processed_attachment_count must not exceed attachment_count." },
-        "attachments": { "type": "array", "items": { "$ref": "#/$defs/recognitionAttachment" }, "maxItems": 100 },
+        "attachment_count": { "type": "integer", "minimum": 1, "maximum": 100 },
+        "processed_attachment_count": { "type": "integer", "minimum": 0, "maximum": 100, "description": "Derived from attachment records that entered visual capability (not not_executed). Runtime validation requires it to be no greater than attachment_count." },
+        "attachments": { "type": "array", "items": { "$ref": "#/$defs/recognitionAttachment" }, "minItems": 1, "maxItems": 100, "uniqueItems": true },
         "issues": { "type": "array", "items": { "type": "string", "minLength": 1, "maxLength": 500 }, "maxItems": 50 }
-      }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "status": { "const": "succeeded" } }, "required": ["status"] },
+          "then": {
+            "properties": {
+              "processed_attachment_count": { "minimum": 1 },
+              "attachments": {
+                "items": { "properties": { "status": { "const": "succeeded" }, "completeness": { "const": "complete" } } }
+              }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "status": { "const": "partial" } }, "required": ["status"] },
+          "then": {
+            "properties": {
+              "processed_attachment_count": { "minimum": 1 },
+              "attachments": {
+                "items": { "properties": { "status": { "enum": ["succeeded", "partial", "failed"] } } },
+                "contains": { "properties": { "status": { "enum": ["partial", "failed"] } }, "required": ["status"] },
+                "minContains": 1
+              }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "status": { "const": "failed" } }, "required": ["status"] },
+          "then": {
+            "properties": {
+              "processed_attachment_count": { "minimum": 1 },
+              "attachments": {
+                "items": { "properties": { "status": { "enum": ["succeeded", "partial", "failed"] } } },
+                "contains": { "properties": { "status": { "const": "failed" } }, "required": ["status"] },
+                "minContains": 1
+              },
+              "issues": { "minItems": 1 }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "status": { "const": "not_executed" } }, "required": ["status"] },
+          "then": {
+            "properties": {
+              "processed_attachment_count": { "const": 0 },
+              "attachments": {
+                "items": { "properties": { "status": { "const": "not_executed" }, "completeness": { "const": "unavailable" } } }
+              }
+            }
+          }
+        }
+      ]
     },
     "recognitionAttachment": {
       "type": "object",
       "additionalProperties": false,
       "required": ["attachment_index", "status", "completeness", "limitations"],
       "properties": {
-        "attachment_index": { "type": "integer", "minimum": 0, "maximum": 9999 },
+        "attachment_index": { "type": "integer", "minimum": 0, "maximum": 99 },
         "status": { "enum": ["succeeded", "partial", "failed", "not_executed"] },
         "completeness": { "enum": ["complete", "partial", "unavailable"] },
         "limitations": { "type": "array", "items": { "type": "string", "minLength": 1, "maxLength": 500 }, "maxItems": 20 }
-      }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "status": { "const": "succeeded" } }, "required": ["status"] },
+          "then": { "properties": { "completeness": { "const": "complete" }, "limitations": { "maxItems": 0 } } }
+        },
+        {
+          "if": { "properties": { "status": { "const": "partial" } }, "required": ["status"] },
+          "then": { "properties": { "completeness": { "const": "partial" }, "limitations": { "minItems": 1 } } }
+        },
+        {
+          "if": { "properties": { "status": { "const": "failed" } }, "required": ["status"] },
+          "then": { "properties": { "completeness": { "const": "unavailable" }, "limitations": { "minItems": 1 } } }
+        },
+        {
+          "if": { "properties": { "status": { "const": "not_executed" } }, "required": ["status"] },
+          "then": { "properties": { "completeness": { "const": "unavailable" } } }
+        }
+      ]
     },
     "evidenceRecord": {
       "type": "object",

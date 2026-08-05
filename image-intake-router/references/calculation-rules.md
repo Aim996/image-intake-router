@@ -22,7 +22,7 @@
 
 只有带有唯一、直接对应的最终付款标签（如“实付”或“支付金额”）的金额，才能成为订单的 `final_paid_amount`，并可被后续费用投影视为消费金额。若存在多个候选金额、标签不完整、订单身份不明或金额冲突，则 `final_paid_amount` 为未知，并在未解决问题中说明。
 
-原价、小计、优惠、配送费、服务费、退款、退货、红包和其他金额始终是 `auxiliary_amounts` 支持事实，不能替代唯一可信的实付金额。退款等只记录其可见事实和状态；本任务不实现退款记账、净额抵扣或任何账目写入。
+每个可见金额必须写入对应的独立订单事实：商品小计为 `goods_subtotal`，活动优惠为 `activity_discount`，券类优惠或红包为 `coupon_discount`，包装/服务费为 `packaging_fee`，配送费为 `delivery_fee`，退款总额为 `refund_total`。这些字段、商品行的 `original_amount`/`unit_price`/`line_paid_amount`/`refund_amount` 都不能替代唯一可信的 `final_paid_amount`。退款只记录可见事实和状态；本任务不实现退款记账、净额抵扣或任何账目写入。
 
 ## v2.1 unified-fact calculation boundaries
 
