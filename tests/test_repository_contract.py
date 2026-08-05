@@ -75,3 +75,8 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertIn("dist/*.sha256", release)
         self.assertNotIn("continue-on-error: true", release)
         self.assertIn("pull_request:", ci)
+        self.assertIn("permissions:\n  contents: read", ci)
+        self.assertIn(
+            "uses: actions/checkout@v4\n        with:\n          persist-credentials: false",
+            release,
+        )
