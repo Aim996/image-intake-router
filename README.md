@@ -6,7 +6,9 @@
 
 ## 当前稳定版本
 
-当前稳定版本为 **2.0.0**。请从 GitHub Release 下载固定版本资产，并阅读 [Release Notes](RELEASE_NOTES.md)。
+当前稳定版本为 **2.0.1**。请从 [GitHub Release v2.0.1](https://github.com/Aim996/image-intake-router/releases/tag/v2.0.1) 下载固定版本资产。
+
+2.0.0 保留为历史发布记录；安装与升级应使用当前固定版本 2.0.1。
 
 ## 系统要求
 
@@ -16,7 +18,7 @@
 
 ## 最简单的安装方法
 
-1. 下载 GitHub Release 中的 2.0.0 发布包和 SHA-256 值。
+1. 从 [GitHub Release v2.0.1](https://github.com/Aim996/image-intake-router/releases/tag/v2.0.1) 下载 `image-intake-router-2.0.1.tgz` 与 `image-intake-router-2.0.1.tgz.sha256`。
 2. 核验 SHA-256 后，将发布包解压到新的 Skill 目录。
 3. 在 OpenClaw 中启用 `image-intake-router`，并停用 `food-image-intake`。
 4. 重载配置并按照 [安装指南](docs/INSTALL.md) 做真实验收。

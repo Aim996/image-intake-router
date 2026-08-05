@@ -17,10 +17,31 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertEqual([name for name in required if not (ROOT / name).is_file()], [])
 
     def test_version_is_consistent(self) -> None:
-        self.assertEqual(self.read("VERSION"), "2.0.0\n")
+        self.assertEqual(self.read("VERSION"), "2.0.1\n")
         for path in ["README.md", "项目说明.md", "CHANGELOG.md", "RELEASE_NOTES.md"]:
             self.assertIn("2.0.0", self.read(path), path)
-        self.assertIn("version: 2.0.0", self.read("image-intake-router/SKILL.md"))
+        self.assertIn("version: 2.0.1", self.read("image-intake-router/SKILL.md"))
+
+    def test_install_docs_name_exact_assets_platforms_and_layout(self) -> None:
+        readme = self.read("README.md")
+        install = self.read("docs/INSTALL.md")
+        for phrase in [
+            "https://github.com/Aim996/image-intake-router/releases/tag/v2.0.1",
+            "image-intake-router-2.0.1.tgz",
+            "image-intake-router-2.0.1.tgz.sha256",
+        ]:
+            self.assertIn(phrase, readme + install)
+        for phrase in [
+            "Windows PowerShell",
+            "Linux",
+            "NAS",
+            "Get-FileHash",
+            "sha256sum -c",
+            "image-intake-router-2.0.1/image-intake-router/",
+            "<OPENCLAW_SKILLS_DIR>",
+        ]:
+            self.assertIn(phrase, install)
+        self.assertNotIn("(RELEASE_NOTES.md)", readme)
 
     def test_docs_cover_required_operations(self) -> None:
         expected = {
