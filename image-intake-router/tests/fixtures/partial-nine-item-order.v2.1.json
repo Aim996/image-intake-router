@@ -3560,7 +3560,7 @@
       },
       {
         "source_product_index": 1,
-        "quantity": 1.5,
+        "quantity": 1500,
         "unit": "ml",
         "display_quantity": 1,
         "display_unit": null
@@ -3581,7 +3581,7 @@
       },
       {
         "source_product_index": 4,
-        "quantity": 2,
+        "quantity": 2000,
         "unit": "ml",
         "display_quantity": 2,
         "display_unit": null

@@ -337,6 +337,10 @@ class RouterV21ProtocolContractTests(unittest.TestCase):
         self.assertEqual(business_product["nominal_weight_or_volume"]["value"], 2.1)
         self.assertEqual(business_product["purchase_quantity"]["value"], 1)
         self.assertEqual(business_product["quantity_unit"]["value"], "粒")
+        self.assertEqual(
+            durian["diet_projection"]["adapter_payload"],
+            [{"source_product_index": 0, "quantity": 2100, "unit": "g", "display_quantity": 1, "display_unit": "粒"}],
+        )
         for field in ["actual_weight_or_volume", "billing_weight", "original_amount", "unit_price", "production_date"]:
             self.assertIsNone(product[field]["value"])
             self.assertEqual(product[field]["confidence"], 0)
@@ -379,7 +383,18 @@ class RouterV21ProtocolContractTests(unittest.TestCase):
             ],
             [("甜玉米", 2, None, 850, "g"), ("鲜牛奶", 1, None, 1.5, "L"), ("黄瓜", 1, None, 700, "g"), ("西兰花", 1, None, 600, "g"), ("豆浆", 2, None, 1, "L"), ("云南生菜", 1, None, 500, "g"), ("香蕉", 1, None, 800, "g")],
         )
-        self.assertTrue(all(payload["display_unit"] is None for payload in partial["diet_projection"]["adapter_payload"]))
+        self.assertEqual(
+            partial["diet_projection"]["adapter_payload"],
+            [
+                {"source_product_index": 0, "quantity": 1700, "unit": "g", "display_quantity": 2, "display_unit": None},
+                {"source_product_index": 1, "quantity": 1500, "unit": "ml", "display_quantity": 1, "display_unit": None},
+                {"source_product_index": 2, "quantity": 700, "unit": "g", "display_quantity": 1, "display_unit": None},
+                {"source_product_index": 3, "quantity": 600, "unit": "g", "display_quantity": 1, "display_unit": None},
+                {"source_product_index": 4, "quantity": 2000, "unit": "ml", "display_quantity": 2, "display_unit": None},
+                {"source_product_index": 5, "quantity": 500, "unit": "g", "display_quantity": 1, "display_unit": None},
+                {"source_product_index": 6, "quantity": 800, "unit": "g", "display_quantity": 1, "display_unit": None},
+            ],
+        )
         for fixture in [durian, partial]:
             self.assertEqual(fixture["preview_state"], "awaiting_confirmation")
             self.assertEqual(fixture["source"], {"image_count": 1, "has_user_text": False})
