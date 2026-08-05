@@ -15,11 +15,11 @@
 6. `merchant`：商家名，或 `null`。
 7. `note`：商品备注，或 `null`；最长 1000 个字符。
 8. `issues`：未解决问题的字符串数组。
-9. `line_items`：可见商品的 v0.3 结构化事实快照数组。
+9. `line_items`：从规范事实适配出的 v0.3 账本公开标量行数组。
 10. `detail_completeness`：`complete`、`partial` 或 `unavailable`。
 11. `omitted_item_count`：未包含在 `line_items` 中、但已知存在的商品种类数。
 
-`executable: true` 时，`amount`、`category_id` 与 `occurred_at` 必须非空。执行 `expense_entry(action="create")` 的公开参数白名单只有：必传的 `amount`、`category_id`、`occurred_at` 与恒定 `source_kind: "image"`；非空时可选的 `merchant`、`note`；以及存在时可选的 v0.3 结构化 `line_items`（1 至 100 项）。`line_items` 必须原样转发，不能静默丢弃或缩减为 `note`。不得传 `entry_type` 或任何其他字段，尤其不得传路由器内部的 `executable`、`detail_completeness`、`omitted_item_count` 或 `issues`。
+`executable: true` 时，`amount`、`category_id` 与 `occurred_at` 必须非空。执行 `expense_entry(action="create")` 的公开参数白名单只有：必传的 `amount`、`category_id`、`occurred_at` 与恒定 `source_kind: "image"`；非空时可选的 `merchant`、`note`；以及存在时可选的 v0.3 结构化 `line_items`（1 至 100 项）。完成适配的账本公开 `line_items` 投影必须原样转发，不能静默丢弃或缩减为 `note`。不得传 `entry_type` 或任何其他字段，尤其不得传路由器内部的 `executable`、`detail_completeness`、`omitted_item_count` 或 `issues`。
 
 `amount` 的范围必须与公开账本 Schema 一致：大于 0 且不超过 `9999999999.99`。`occurred_at`
 必须是 20 到 40 个字符的带时区 ISO 8601 时间；这两个边界在基础投影和可执行分支都必须
@@ -32,9 +32,9 @@
 最终实付标签的金额可填入 `amount`；原价、小计、优惠、运费、服务费、退款或其他辅助
 金额绝不能替代它。
 
-`line_items` 保留每个可见商品的结构化业务事实，独立于最长 1000 字符、面向人的 `note`；`note` 截断或概括时不得删除 `line_items` 的可见事实。`detail_completeness: "complete"` 仅表示商品明细完整且 `omitted_item_count` 为 0；`"partial"` 表示只路由可见明细，并把已知未展开、隐藏或裁切的商品种类计入 `omitted_item_count`；`"unavailable"` 表示没有可安全路由的商品明细。`omitted_item_count` 只计数已知遗漏，未知数目不得伪造为完整。
+`facts.products` 保留每个可见商品的完整结构化业务事实；`line_items` 则保留其可写入账本公开契约的确定性标量投影，独立于最长 1000 字符、面向人的 `note`。`note` 截断或概括时不得删除 `line_items` 的可见投影。`detail_completeness: "complete"` 仅表示商品明细完整且 `omitted_item_count` 为 0；`"partial"` 表示只路由可见明细，并把已知未展开、隐藏或裁切的商品种类计入 `omitted_item_count`；`"unavailable"` 表示没有可安全路由的商品明细。`omitted_item_count` 只计数已知遗漏，未知数目不得伪造为完整。
 
-只有 `full_name.value` 已知且非空、并且 `purchase_quantity.value` 为正数的商品行才可进入并转发 `line_items`；`purchase_quantity.unit` 在图片未显示时仍可为 `null`。其他已识别但不满足这两个账本边界的事实保留在统一 `facts` 与相关问题中，不得伪造为可写入的 `line_items`。
+只有 `facts.products` 中 `full_name.value` 已知且非空、并且 `purchase_quantity.value` 为正数的商品行才可进入适配器；适配器把它们分别投影为 `full_name` 与 `quantity`，而图片未显示的 `quantity_unit` 必须省略。其他已识别但不满足这两个账本边界的事实保留在统一 `facts` 与相关问题中，不得伪造为可写入的 `line_items`。
 
 `executable: false` 时，`amount`、`category_id`、`occurred_at`、`merchant` 与 `note`
 均为 `null`，并且 `issues` 至少包含一个面向人的不执行原因。`source_kind` 仍是
@@ -100,9 +100,15 @@ This section controls if an earlier descriptive passage conflicts with it.
 
 ### Expense
 
-Create one expense, never one expense per product. `line_items` contains every ledger-forwardable visible purchased product with name, quantity, specification/weight-or-volume, line paid amount, refund, and available metadata. `note` is generated independently as a concise display list; for many products it may name the first items plus `其他 N 种商品略`, but note truncation never removes or truncates structured `line_items`.
+`facts.products` is the canonical provenance-rich fact set. It keeps fact wrappers, confidence, calculated status, evidence, and router-only business fields intact. The expense adapter is a one-way boundary from those canonical facts to `expense_projection.line_items`; it never changes `facts.products`, `diet_projection.business_products`, or the business digest.
 
-Refund and short-weight facts remain in order/product facts and `line_items`. Do not create a refund income, negative expense, or second write, and do not net final paid unless the image explicitly establishes that result. Forward a present, nonempty `line_items` to personal-expense-ledger v0.3. If the installed ledger does not advertise support, fail that domain closed rather than silently dropping detail.
+Create one expense, never one expense per product. `line_items` contains every ledger-forwardable visible purchased product as a ledger-public scalar row, not as a copy of the fact wrappers. Its required fields are nonblank `full_name`, finite positive `quantity`, and `field_metadata`; optional public fields are `normalized_name`, `specification`, `quantity_unit`, the four `{value, unit}` positive measurements, the four non-negative yuan amounts with at most cent precision, `production_date`, and `line_status`. Omit optional fields whose source fact is null or unknown. Map `purchase_quantity.value` to `quantity` and `line_paid_amount.value` to `paid_amount`. Never expose `purchase_quantity`, `line_paid_amount`, `item_type`, `visibility_status`, wrapper `currency`, confidence, calculated, or evidence as top-level line-item fields.
+
+For every emitted public field other than `field_metadata`, create exactly one deterministic metadata entry using the corresponding source wrapper and its first applicable evidence record: preserve the public field name in `field`, evidence source in `source`, wrapper confidence and calculated status, and evidence location when present. Metadata source is one of `visible_label`, `user_text`, `calculated`, `reference_database`, or `visual_estimate`; attachment context is forbidden. `field_metadata` has 1 to 100 strict entries and its fields exactly cover the emitted public fields.
+
+The finalized ledger-public projection is forwarded intact to `expense_entry.create`; raw/wrapper facts are not forwarded. `note` is generated independently as a concise display list; for many products it may name the first items plus `其他 N 种商品略`, but note truncation never removes or truncates structured `line_items`. Adapter-only repairs do not change the business digest or require another user confirmation.
+
+Refund and short-weight facts remain in order/product facts and their available ledger-public line-item fields. Do not create a refund income, negative expense, or second write, and do not net final paid unless the image explicitly establishes that result. Forward a present, nonempty finalized ledger-public `line_items` projection to personal-expense-ledger v0.3. If the installed ledger does not advertise support, fail that domain closed rather than silently dropping detail.
 
 ### Diet/pantry
 

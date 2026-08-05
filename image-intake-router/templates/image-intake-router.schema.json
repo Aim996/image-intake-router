@@ -474,41 +474,58 @@
     "fieldMetadata": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["confidence", "calculated", "evidence"],
+      "required": ["field", "source", "confidence", "calculated"],
       "properties": {
+        "field": {
+          "enum": [
+            "full_name", "normalized_name", "specification", "quantity", "quantity_unit",
+            "nominal_weight_or_volume", "actual_weight_or_volume", "billing_weight", "weight_variance",
+            "original_amount", "unit_price", "paid_amount", "refund_amount", "production_date", "line_status"
+          ]
+        },
+        "source": {
+          "enum": ["visible_label", "user_text", "calculated", "reference_database", "visual_estimate"]
+        },
         "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
         "calculated": { "type": "boolean" },
-        "evidence": { "type": "array", "items": { "$ref": "#/$defs/evidenceRecord" }, "maxItems": 20 }
+        "location": { "type": "string", "minLength": 1, "maxLength": 240, "pattern": "\\S" }
+      }
+    },
+    "expenseMeasurement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["value", "unit"],
+      "properties": {
+        "value": { "type": "number", "exclusiveMinimum": 0, "maximum": 1000000000 },
+        "unit": { "type": "string", "minLength": 1, "maxLength": 40, "pattern": "\\S" }
       }
     },
     "expenseLineItem": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "full_name", "normalized_name", "specification", "purchase_quantity", "quantity_unit",
-        "nominal_weight_or_volume", "actual_weight_or_volume", "billing_weight", "weight_variance",
-        "original_amount", "unit_price", "line_paid_amount", "refund_amount", "production_date",
-        "line_status", "item_type", "visibility_status", "field_metadata"
-      ],
+      "required": ["full_name", "quantity", "field_metadata"],
       "properties": {
-        "full_name": { "$ref": "#/$defs/ledgerLineNameFact" },
-        "normalized_name": { "$ref": "#/$defs/textFact" },
-        "specification": { "$ref": "#/$defs/textFact" },
-        "purchase_quantity": { "$ref": "#/$defs/ledgerLineQuantityFact" },
-        "quantity_unit": { "$ref": "#/$defs/textFact" },
-        "nominal_weight_or_volume": { "$ref": "#/$defs/quantityFact" },
-        "actual_weight_or_volume": { "$ref": "#/$defs/quantityFact" },
-        "billing_weight": { "$ref": "#/$defs/quantityFact" },
-        "weight_variance": { "$ref": "#/$defs/quantityFact" },
-        "original_amount": { "$ref": "#/$defs/amountFact" },
-        "unit_price": { "$ref": "#/$defs/amountFact" },
-        "line_paid_amount": { "$ref": "#/$defs/amountFact" },
-        "refund_amount": { "$ref": "#/$defs/amountFact" },
-        "production_date": { "$ref": "#/$defs/dateFact" },
-        "line_status": { "$ref": "#/$defs/textFact" },
-        "item_type": { "$ref": "#/$defs/textFact" },
-        "visibility_status": { "$ref": "#/$defs/textFact" },
-        "field_metadata": { "$ref": "#/$defs/fieldMetadata" }
+        "full_name": { "type": "string", "minLength": 1, "maxLength": 240, "pattern": "\\S" },
+        "normalized_name": { "type": "string", "minLength": 1, "maxLength": 240, "pattern": "\\S" },
+        "specification": { "type": "string", "minLength": 1, "maxLength": 240, "pattern": "\\S" },
+        "quantity": { "type": "number", "exclusiveMinimum": 0, "maximum": 1000000000 },
+        "quantity_unit": { "type": "string", "minLength": 1, "maxLength": 40, "pattern": "\\S" },
+        "nominal_weight_or_volume": { "$ref": "#/$defs/expenseMeasurement" },
+        "actual_weight_or_volume": { "$ref": "#/$defs/expenseMeasurement" },
+        "billing_weight": { "$ref": "#/$defs/expenseMeasurement" },
+        "weight_variance": { "$ref": "#/$defs/expenseMeasurement" },
+        "original_amount": { "type": "number", "minimum": 0, "maximum": 9999999999.99, "multipleOf": 0.01 },
+        "unit_price": { "type": "number", "minimum": 0, "maximum": 9999999999.99, "multipleOf": 0.01 },
+        "paid_amount": { "type": "number", "minimum": 0, "maximum": 9999999999.99, "multipleOf": 0.01 },
+        "refund_amount": { "type": "number", "minimum": 0, "maximum": 9999999999.99, "multipleOf": 0.01 },
+        "production_date": { "type": "string", "format": "date", "minLength": 10, "maxLength": 10 },
+        "line_status": { "type": "string", "minLength": 1, "maxLength": 240, "pattern": "\\S" },
+        "field_metadata": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/fieldMetadata" },
+          "minItems": 1,
+          "maxItems": 100
+        }
       }
     },
     "facts": {

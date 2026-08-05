@@ -22,6 +22,20 @@ ORDER_FACT_KEYS = {
     "declared_item_kind_count", "recognized_item_kind_count", "hidden_item_kind_count",
     "has_unexpanded_items", "content_complete",
 }
+LEDGER_PUBLIC_LINE_ITEM_KEYS = {
+    "full_name", "normalized_name", "specification", "quantity", "quantity_unit",
+    "nominal_weight_or_volume", "actual_weight_or_volume", "billing_weight", "weight_variance",
+    "original_amount", "unit_price", "paid_amount", "refund_amount", "production_date",
+    "line_status", "field_metadata",
+}
+LEDGER_PUBLIC_LINE_ITEM_REQUIRED = {"full_name", "quantity", "field_metadata"}
+LEDGER_PUBLIC_LINE_ITEM_WRAPPER_ONLY = {
+    "purchase_quantity", "line_paid_amount", "item_type", "visibility_status", "currency",
+    "confidence", "calculated", "evidence",
+}
+LEDGER_PUBLIC_MEASUREMENT_FIELDS = {
+    "nominal_weight_or_volume", "actual_weight_or_volume", "billing_weight", "weight_variance",
+}
 
 
 class ProductContractTests(unittest.TestCase):
@@ -97,6 +111,12 @@ class ProductContractTests(unittest.TestCase):
         self.assertIn("`约 2.1 kg × 1粒`", content)
         self.assertNotIn("`约 2.1 kg × 1袋`", content)
         self.assertIn("`2100 g` or `piece`", content)
+        self.assertIn("`facts.products` is the canonical provenance-rich fact set", content)
+        self.assertIn("The finalized ledger-public projection is forwarded intact", content)
+        self.assertIn("Adapter-only repairs do not change the business digest or require another user confirmation", content)
+        self.assertNotIn("raw/wrapper `line_items` are forwarded intact", content)
+        self.assertIn("完成适配的账本公开 `line_items` 投影必须原样转发", content)
+        self.assertNotIn("`line_items` 必须原样转发", content)
 
     def test_confirmation_uses_a_business_digest_and_one_later_confirmation(self) -> None:
         content = self.read(REFERENCES / "confirmation-and-execution.md")
@@ -229,6 +249,44 @@ class ProductContractTests(unittest.TestCase):
         self.assertEqual(audit["properties"]["evidence"]["items"]["$ref"], "#/$defs/evidenceRecord")
         self.assertEqual(pantry_item["properties"]["source_text"]["maxLength"], 240)
         self.assertEqual(pantry_item["properties"]["source_text"]["pattern"], "^[^\\r\\n]+$")
+
+    def test_schema_adapts_expense_lines_to_strict_ledger_public_scalars(self) -> None:
+        defs = json.loads(self.read(SCHEMA))["$defs"]
+        line = defs["expenseLineItem"]
+        metadata = defs["fieldMetadata"]
+        measurement = defs["expenseMeasurement"]
+
+        self.assertFalse(line["additionalProperties"])
+        self.assertEqual(set(line["properties"]), LEDGER_PUBLIC_LINE_ITEM_KEYS)
+        self.assertEqual(set(line["required"]), LEDGER_PUBLIC_LINE_ITEM_REQUIRED)
+        self.assertEqual(line["properties"]["full_name"]["minLength"], 1)
+        self.assertEqual(line["properties"]["full_name"]["maxLength"], 240)
+        self.assertEqual(line["properties"]["full_name"]["pattern"], "\\S")
+        self.assertEqual(line["properties"]["quantity"]["exclusiveMinimum"], 0)
+        self.assertEqual(line["properties"]["quantity"]["maximum"], 1_000_000_000)
+        self.assertEqual(line["properties"]["field_metadata"]["minItems"], 1)
+        self.assertEqual(line["properties"]["field_metadata"]["maxItems"], 100)
+        for amount_field in ["original_amount", "unit_price", "paid_amount", "refund_amount"]:
+            amount = line["properties"][amount_field]
+            self.assertEqual(amount["minimum"], 0)
+            self.assertEqual(amount["maximum"], 9_999_999_999.99)
+            self.assertEqual(amount["multipleOf"], 0.01)
+        self.assertFalse(metadata["additionalProperties"])
+        self.assertEqual(set(metadata["required"]), {"field", "source", "confidence", "calculated"})
+        self.assertEqual(set(metadata["properties"]), {"field", "source", "confidence", "calculated", "location"})
+        self.assertEqual(set(metadata["properties"]["field"]["enum"]), LEDGER_PUBLIC_LINE_ITEM_KEYS - {"field_metadata"})
+        self.assertEqual(
+            metadata["properties"]["source"]["enum"],
+            ["visible_label", "user_text", "calculated", "reference_database", "visual_estimate"],
+        )
+        self.assertEqual(metadata["properties"]["confidence"]["minimum"], 0)
+        self.assertEqual(metadata["properties"]["confidence"]["maximum"], 1)
+        self.assertEqual(metadata["properties"]["location"]["maxLength"], 240)
+        self.assertFalse(measurement["additionalProperties"])
+        self.assertEqual(set(measurement["required"]), {"value", "unit"})
+        self.assertEqual(measurement["properties"]["value"]["exclusiveMinimum"], 0)
+        self.assertEqual(measurement["properties"]["value"]["maximum"], 1_000_000_000)
+        self.assertEqual(measurement["properties"]["unit"]["maxLength"], 40)
 
     def test_schema_requires_evidence_for_known_facts_and_complete_quality(self) -> None:
         schema = json.loads(self.read(SCHEMA))
@@ -436,9 +494,55 @@ class RouterV21ProtocolContractTests(unittest.TestCase):
         self.assertTrue({"confidence", "calculated", "evidence"}.issubset(product["full_name"]))
         self.assertNotIn("盒", json.dumps(durian, ensure_ascii=False))
         durian_expense_line = durian["expense_projection"]["line_items"][0]
-        self.assertEqual(set(durian_expense_line) - {"field_metadata"}, PRODUCT_FACT_KEYS)
-        self.assertTrue({"confidence", "calculated", "evidence"}.issubset(durian_expense_line["field_metadata"]))
-        self.assertEqual(durian_expense_line["line_paid_amount"]["value"], 119.00)
+        self.assertEqual(
+            {
+                field: durian["expense_projection"][field]
+                for field in ["executable", "amount", "category_id", "occurred_at", "source_kind", "merchant", "note", "issues"]
+            },
+            {
+                "executable": True,
+                "amount": 119.00,
+                "category_id": "shopping",
+                "occurred_at": "2026-08-05T00:00:00+08:00",
+                "source_kind": "image",
+                "merchant": None,
+                "note": None,
+                "issues": [],
+            },
+        )
+        self.assertEqual(
+            set(durian_expense_line),
+            {
+                "full_name", "normalized_name", "specification", "quantity", "quantity_unit",
+                "nominal_weight_or_volume", "weight_variance", "paid_amount", "refund_amount",
+                "line_status", "field_metadata",
+            },
+        )
+        self.assertEqual(durian_expense_line["full_name"], "金枕榴莲")
+        self.assertEqual(durian_expense_line["normalized_name"], "榴莲")
+        self.assertEqual(durian_expense_line["specification"], "约2.1kg × 1粒")
+        self.assertEqual(durian_expense_line["quantity"], 1)
+        self.assertEqual(durian_expense_line["quantity_unit"], "粒")
+        self.assertEqual(durian_expense_line["nominal_weight_or_volume"], {"value": 2.1, "unit": "kg"})
+        self.assertEqual(durian_expense_line["weight_variance"], {"value": 228, "unit": "g"})
+        self.assertEqual(durian_expense_line["paid_amount"], 119.00)
+        self.assertEqual(durian_expense_line["refund_amount"], 12.92)
+        self.assertEqual(durian_expense_line["line_status"], "purchased_and_received")
+        for field in ["actual_weight_or_volume", "billing_weight", "original_amount", "unit_price", "production_date"]:
+            self.assertNotIn(field, durian_expense_line)
+        self.assertTrue(
+            all(
+                not isinstance(value, dict)
+                for field, value in durian_expense_line.items()
+                if field not in {"field_metadata", *LEDGER_PUBLIC_MEASUREMENT_FIELDS}
+            )
+        )
+        self.assertFalse(LEDGER_PUBLIC_LINE_ITEM_WRAPPER_ONLY.intersection(durian_expense_line))
+        self.assertEqual(
+            {entry["field"] for entry in durian_expense_line["field_metadata"]},
+            set(durian_expense_line) - {"field_metadata"},
+        )
+        self.assertTrue(all(entry["source"] != "attachment_context" for entry in durian_expense_line["field_metadata"]))
         business_product = durian["diet_projection"]["business_products"][0]
         self.assertEqual(set(business_product), PRODUCT_FACT_KEYS)
         self.assertEqual(business_product["nominal_weight_or_volume"]["value"], 2.1)
@@ -464,13 +568,51 @@ class RouterV21ProtocolContractTests(unittest.TestCase):
         ]
         self.assertEqual(len(partial["facts"]["products"]), 7)
         self.assertEqual(len(partial["expense_projection"]["line_items"]), 7)
+        self.assertEqual(
+            {
+                field: partial["expense_projection"][field]
+                for field in ["executable", "amount", "category_id", "occurred_at", "source_kind", "merchant", "note", "issues"]
+            },
+            {
+                "executable": True,
+                "amount": 65.48,
+                "category_id": "shopping",
+                "occurred_at": "2026-08-05T00:00:00+08:00",
+                "source_kind": "image",
+                "merchant": None,
+                "note": None,
+                "issues": [],
+            },
+        )
         self.assertEqual(set(partial["facts"]["order"]), ORDER_FACT_KEYS)
-        for product_row, expense_line in zip(partial["facts"]["products"], partial["expense_projection"]["line_items"]):
+        expected_expense_rows = [
+            ("甜玉米", "约850 g × 2", 2, {"value": 850, "unit": "g"}, 11.78),
+            ("鲜牛奶", "1.5 L × 1", 1, {"value": 1.5, "unit": "L"}, 10.90),
+            ("黄瓜", "约700 g × 1", 1, {"value": 700, "unit": "g"}, 4.99),
+            ("西兰花", "约600 g × 1", 1, {"value": 600, "unit": "g"}, 3.95),
+            ("豆浆", "1 L × 2", 2, {"value": 1, "unit": "L"}, 13.00),
+            ("云南生菜", "约500 g × 1", 1, {"value": 500, "unit": "g"}, 4.96),
+            ("香蕉", "约800 g × 1", 1, {"value": 800, "unit": "g"}, 11.90),
+        ]
+        for product_row, expense_line, expected_expense in zip(partial["facts"]["products"], partial["expense_projection"]["line_items"], expected_expense_rows):
             self.assertEqual(set(product_row), PRODUCT_FACT_KEYS)
-            self.assertEqual(set(expense_line) - {"field_metadata"}, PRODUCT_FACT_KEYS)
-            self.assertTrue({"confidence", "calculated", "evidence"}.issubset(expense_line["field_metadata"]))
+            self.assertTrue(set(expense_line).issubset(LEDGER_PUBLIC_LINE_ITEM_KEYS))
+            self.assertTrue(LEDGER_PUBLIC_LINE_ITEM_REQUIRED.issubset(expense_line))
+            self.assertEqual(
+                (expense_line["full_name"], expense_line["specification"], expense_line["quantity"], expense_line["nominal_weight_or_volume"], expense_line["paid_amount"]),
+                expected_expense,
+            )
+            self.assertTrue(
+                all(
+                    not isinstance(value, dict)
+                    for field, value in expense_line.items()
+                    if field not in {"field_metadata", *LEDGER_PUBLIC_MEASUREMENT_FIELDS}
+                )
+            )
+            self.assertFalse(LEDGER_PUBLIC_LINE_ITEM_WRAPPER_ONLY.intersection(expense_line))
+            self.assertEqual({entry["field"] for entry in expense_line["field_metadata"]}, set(expense_line) - {"field_metadata"})
+            self.assertTrue(all(entry["source"] != "attachment_context" for entry in expense_line["field_metadata"]))
             self.assertIsNone(product_row["quantity_unit"]["value"])
-            self.assertIsNone(expense_line["quantity_unit"]["value"])
         self.assertEqual([(row["full_name"]["value"], row["specification"]["value"], row["line_paid_amount"]["value"]) for row in partial["facts"]["products"]], expected_rows)
         order = partial["facts"]["order"]
         self.assertEqual(order["declared_item_kind_count"]["value"], 9)
@@ -490,6 +632,8 @@ class RouterV21ProtocolContractTests(unittest.TestCase):
             ],
             [("甜玉米", 2, None, 850, "g"), ("鲜牛奶", 1, None, 1.5, "L"), ("黄瓜", 1, None, 700, "g"), ("西兰花", 1, None, 600, "g"), ("豆浆", 2, None, 1, "L"), ("云南生菜", 1, None, 500, "g"), ("香蕉", 1, None, 800, "g")],
         )
+        self.assertEqual(durian["diet_projection"]["business_products"], durian["facts"]["products"])
+        self.assertEqual(partial["diet_projection"]["business_products"], partial["facts"]["products"])
         self.assertEqual(
             partial["diet_projection"]["adapter_payload"],
             [
