@@ -170,11 +170,11 @@ Tool notation: `E` is one allowed `expense_entry.create`; `D(item)` is one allow
 
 **Input facts.** A successful `recognition_run` on a live order image returns seven visible, received foods: apples 1 kg, eggs 10 pieces, milk 250 ml × 2, yogurt 200 g, rice 1 kg, spinach 300 g, and bananas 500 g. The same image visibly says `2 more products collapsed; expand to view`; their names, quantities, and statuses are unavailable. A unique final paid amount is RMB 168.00.
 
-**Expected complete preview.** The expense note and pantry candidates enumerate the seven visible products exactly once. The two collapsed products are separately represented as unknown/uncertain rows, with the reason that their required details were not visible. The preview does not silently discard their existence or invent their contents.
+**Expected complete preview.** The expense line items/note and pantry candidates enumerate only the seven visible products exactly once. Record order-level completeness with `hidden_product_count: 2`, explaining that the collapsed products’ required details were not visible. Do not create product rows, pantry candidates, or uncertain product rows for either collapsed product.
 
 **Allowed trace.** Before confirmation `[]`; after all-domain confirmation `[E, D(apples-1kg), D(eggs-10), D(milk-250ml-x2), D(yogurt-200g), D(rice-1kg), D(spinach-300g), D(bananas-500g)]`.
 
-**Forbidden.** Calling an expansion/navigation action; treating the collapsed count as sufficient pantry evidence; a second recognition pass; immediate execution under time pressure.
+**Forbidden.** Calling an expansion/navigation action; inventing one product row per collapsed product; treating the collapsed count as sufficient pantry evidence; a second recognition pass; immediate execution under time pressure.
 
 ### C18 — vision was not executed despite attachment context
 
