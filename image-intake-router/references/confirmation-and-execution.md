@@ -10,7 +10,7 @@ Adapter-only changes do not change the digest and do not reconfirm. They include
 
 ## Preview and confirmation
 
-Keep `draft` → `awaiting_confirmation` → `executing` → `consumed`, with a latest-preview-only rule. The initial image turn requires a successful or partial `recognition_run`, creates one unified fact set and one business preview, and makes zero business writes. A confirmation word in that image message cannot execute; only a later valid confirmation of the latest `awaiting_confirmation` digest can execute.
+Keep `draft` → `awaiting_confirmation` → `executing` → `consumed`, with a latest-preview-only rule. The initial image turn requires a successful or partial `recognition_run`, creates one unified fact set and one business preview, and makes zero business writes. `Partial` is eligible only when all attachments entered vision and each attachment is `succeeded` or `partial`; any failed attachment or mixed-batch `not_executed` attachment leaves the state at `draft`, creates no digest or confirmation state, and permits no adapter execution. A confirmation word in that image message cannot execute; only a later valid confirmation of the latest `awaiting_confirmation` digest can execute.
 
 Valid later confirmation may select all executable work, expense only, or diet only. Questions and clarification requests are not confirmation. When a digest business field changes, invalidate the old preview, make the new preview visible, then await its confirmation. Adapter-only corrections retain the original confirmation as described in recovery.
 

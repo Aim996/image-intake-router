@@ -12,7 +12,9 @@ metadata:
 
 Use real vision once for the attachment batch. A successful or partial `recognition_run` creates one unified fact set, then two fact-only projections, one concise business preview, one later confirmation, and independent writes/recovery. Never re-read the image for either projection.
 
-On the initial image turn, require a successful or partial `recognition_run`, create the fact set and preview, and make **zero business writes**. Even a confirmation word in that same message is not a confirmation. A failed or not-executed recognition run fails closed: explain briefly, request real visual capability or re-upload, and render no business preview or confirmation prompt.
+Treat `partial` as usable pixel-derived facts with disclosed crop, blur, fold, occlusion, or hidden-row limitations only when every attachment entered visual capability and every attachment status is `succeeded` or `partial`. If any attachment is `failed`, or a mixed batch contains `not_executed`, the global run is `failed`; if all attachments are `not_executed`, the global run is `not_executed`.
+
+On the initial image turn, require a successful or partial `recognition_run`, create the fact set and preview, and make **zero business writes**. Even a confirmation word in that same message is not a confirmation. A failed or not-executed recognition run fails closed: keep fact-set quality unavailable and both projections null, explain briefly, request real visual capability or re-upload, and create no business preview, confirmation state, adapter execution, or business write.
 
 The preview lifecycle is `draft` → `awaiting_confirmation` → `executing` → `consumed`. Only a later confirmation of the latest `awaiting_confirmation` business digest may write. Repeated confirmation of `executing` or `consumed` returns the known receipt/state with zero new writes.
 

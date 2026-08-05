@@ -1,5 +1,7 @@
 # image-intake-router 2.1.0 Release Notes
 
+Multi-attachment recognition now fails closed when any attachment fails or when a mixed batch contains an attachment that was not executed. Such a run has unavailable facts, null projections, no preview or confirmation state, no adapter execution, and zero business writes. A screenshot with usable pixel-derived facts plus disclosed crop, fold, blur, occlusion, or hidden-row limitations remains an executable `partial` result.
+
 ## 主要变化
 
 2.1.0 将图片处理升级为一次真实像素/媒体识别后的统一详细事实：商品名、规格、数量、重量/容量、实付、退款、商家、时间、状态、来源、置信度和图片完整性可被下游安全复用。随手账收到标量商品明细（名称、规格、数量、实付与退款），食序管家复用同一事实，不再进行第二次读图。

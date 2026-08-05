@@ -38,6 +38,42 @@ LEDGER_PUBLIC_MEASUREMENT_FIELDS = {
 }
 
 
+def matches_schema_fragment(instance: object, fragment: dict) -> bool:
+    """Evaluate the small JSON Schema subset used by recognition status guards."""
+    if "required" in fragment and (
+        not isinstance(instance, dict) or any(key not in instance for key in fragment["required"])
+    ):
+        return False
+    if "const" in fragment and instance != fragment["const"]:
+        return False
+    if "enum" in fragment and instance not in fragment["enum"]:
+        return False
+    if fragment.get("type") == "null" and instance is not None:
+        return False
+    if "minimum" in fragment and (
+        not isinstance(instance, (int, float)) or instance < fragment["minimum"]
+    ):
+        return False
+    if "properties" in fragment:
+        if not isinstance(instance, dict):
+            return False
+        for key, constraint in fragment["properties"].items():
+            if key in instance and not matches_schema_fragment(instance[key], constraint):
+                return False
+    if "items" in fragment:
+        if not isinstance(instance, list):
+            return False
+        if any(not matches_schema_fragment(item, fragment["items"]) for item in instance):
+            return False
+    if "contains" in fragment:
+        if not isinstance(instance, list):
+            return False
+        matches = sum(matches_schema_fragment(item, fragment["contains"]) for item in instance)
+        if matches < fragment.get("minContains", 1):
+            return False
+    return all(matches_schema_fragment(instance, rule) for rule in fragment.get("allOf", []))
+
+
 class ProductContractTests(unittest.TestCase):
     def read(self, path: Path) -> str:
         return path.read_text(encoding="utf-8").replace("\r\n", "\n")
@@ -400,6 +436,16 @@ class RouterV21ProtocolContractTests(unittest.TestCase):
     def fixture(self, name: str) -> dict:
         return json.loads((FIXTURES / name).read_text(encoding="utf-8"))
 
+    def recognition_status_rule(self, status: str) -> dict:
+        rules = self.schema()["$defs"]["recognitionRun"]["allOf"]
+        matches = [
+            rule["then"]
+            for rule in rules
+            if rule.get("if", {}).get("properties", {}).get("status", {}).get("const") == status
+        ]
+        self.assertEqual(len(matches), 1, f"recognition status {status} must have one conditional rule")
+        return matches[0]
+
     def test_schema_declares_v21_recognition_run(self) -> None:
         schema = self.schema()
         self.assertIn("recognition_run", schema["required"])
@@ -422,6 +468,59 @@ class RouterV21ProtocolContractTests(unittest.TestCase):
         attachment = defs["recognitionAttachment"]
         self.assertTrue({"status", "completeness", "limitations"}.issubset(attachment["required"]))
 
+    def test_recognition_status_conditions_fail_closed_per_attachment(self) -> None:
+        def run(status: str, attachment_statuses: list[str], processed: int, issues: list[str]) -> dict:
+            completeness = {
+                "succeeded": "complete",
+                "partial": "partial",
+                "failed": "unavailable",
+                "not_executed": "unavailable",
+            }
+            return {
+                "status": status,
+                "processed_attachment_count": processed,
+                "attachments": [
+                    {
+                        "attachment_index": index,
+                        "status": attachment_status,
+                        "completeness": completeness[attachment_status],
+                        "limitations": [] if attachment_status == "succeeded" else ["controlled limitation"],
+                    }
+                    for index, attachment_status in enumerate(attachment_statuses)
+                ],
+                "issues": issues,
+            }
+
+        partial_rule = self.recognition_status_rule("partial")
+        self.assertFalse(matches_schema_fragment(run("partial", ["succeeded", "failed"], 2, ["failed image"]), partial_rule))
+        self.assertFalse(matches_schema_fragment(run("partial", ["succeeded", "not_executed"], 1, ["image skipped"]), partial_rule))
+        self.assertTrue(matches_schema_fragment(run("partial", ["succeeded", "partial"], 2, []), partial_rule))
+        self.assertTrue(matches_schema_fragment(run("partial", ["partial", "partial"], 2, []), partial_rule))
+
+        failed_rule = self.recognition_status_rule("failed")
+        self.assertTrue(matches_schema_fragment(run("failed", ["succeeded", "failed"], 2, ["failed image"]), failed_rule))
+        self.assertTrue(matches_schema_fragment(run("failed", ["succeeded", "not_executed"], 1, ["image skipped"]), failed_rule))
+        self.assertFalse(matches_schema_fragment(run("failed", ["succeeded", "succeeded"], 2, ["wrong status"]), failed_rule))
+        self.assertFalse(matches_schema_fragment(run("failed", ["not_executed", "not_executed"], 0, ["no vision"]), failed_rule))
+
+        succeeded_rule = self.recognition_status_rule("succeeded")
+        self.assertTrue(matches_schema_fragment(run("succeeded", ["succeeded", "succeeded"], 2, []), succeeded_rule))
+        self.assertFalse(matches_schema_fragment(run("succeeded", ["succeeded", "partial"], 2, []), succeeded_rule))
+
+        not_executed_rule = self.recognition_status_rule("not_executed")
+        self.assertTrue(matches_schema_fragment(run("not_executed", ["not_executed", "not_executed"], 0, []), not_executed_rule))
+        self.assertFalse(matches_schema_fragment(run("not_executed", ["succeeded", "not_executed"], 1, []), not_executed_rule))
+
+    def test_runtime_invariants_require_exact_attachment_coverage_and_processed_count(self) -> None:
+        description = self.schema()["$defs"]["recognitionRun"]["description"]
+        for invariant in [
+            "attachment_count equals source.image_count and attachments.length",
+            "unique contiguous attachment_index",
+            "processed_attachment_count equals the number of attachments whose status is not not_executed",
+            "A succeeded run requires processed_attachment_count to equal attachment_count",
+        ]:
+            self.assertIn(invariant, description)
+
     def test_unsuccessful_recognition_blocks_executable_projections(self) -> None:
         rules = self.schema()["allOf"]
         guards = [
@@ -433,12 +532,33 @@ class RouterV21ProtocolContractTests(unittest.TestCase):
         guard = guards[0]
         guarded = guard["then"]["properties"]
         self.assertEqual(guarded["quality"]["properties"]["fact_set_status"]["const"], "unavailable")
+        self.assertEqual(guarded.get("preview_state"), {"const": "draft"})
         for projection in ["expense_projection", "diet_projection"]:
             constraint = guarded[projection]
             self.assertTrue(
                 constraint.get("type") == "null" or constraint.get("const", object()) is None,
                 f"{projection} must be null when recognition did not succeed",
             )
+
+        failed_record = {
+            "preview_state": "draft",
+            "expense_projection": None,
+            "diet_projection": None,
+            "quality": {"fact_set_status": "unavailable"},
+        }
+        self.assertTrue(matches_schema_fragment(failed_record, guard["then"]))
+        for unsafe_mutation in [
+            {**failed_record, "preview_state": "awaiting_confirmation"},
+            {**failed_record, "expense_projection": {"executable": True}},
+            {**failed_record, "diet_projection": {"items": []}},
+            {**failed_record, "quality": {"fact_set_status": "partial"}},
+        ]:
+            self.assertFalse(matches_schema_fragment(unsafe_mutation, guard["then"]))
+
+        root_properties = self.schema()["properties"]
+        self.assertNotIn("confirmation_token", root_properties)
+        self.assertNotIn("adapter_execution", root_properties)
+        self.assertNotIn("business_writes", root_properties)
 
     def test_fact_wrappers_and_evidence_are_v21_ready(self) -> None:
         defs = self.schema()["$defs"]

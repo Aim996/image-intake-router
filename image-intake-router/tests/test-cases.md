@@ -2,7 +2,7 @@
 
 ## Test convention
 
-These are behavioural contracts, not examples of a live visual read. Where a case says an image is *described*, every stated fact has source `user_text`; it must never be represented as `visible_label`. A genuinely authored user-message-text case remains distinct from attachment context. Where a case relies on live-image facts, only pixels available to the model may produce a `visible_label` fact and the case must include an explicit successful `recognition_run`; attachment presence, a filename, alt text, or an unexecuted vision request is not a successful recognition result. Every initial-image case ends in one complete dual preview and has **zero business writes**. Each preview includes the expense decision, pantry candidates, excluded items, uncertain items, and the prompt: `Confirm, expense only, pantry only, or describe a change.`
+These are behavioural contracts, not examples of a live visual read. Where a case says an image is *described*, every stated fact has source `user_text`; it must never be represented as `visible_label`. A genuinely authored user-message-text case remains distinct from attachment context. Where a case relies on live-image facts, only pixels available to the model may produce a `visible_label` fact and the case must include an explicit successful or usable-partial `recognition_run`; attachment presence, a filename, alt text, or an unexecuted vision request is not a successful recognition result. Every initial-image case that passes the recognition gate ends in one complete dual preview and has **zero business writes**. Failed and not-executed cases produce no preview or confirmation prompt. Each permitted preview includes the expense decision, pantry candidates, excluded items, uncertain items, and the prompt: `Confirm, expense only, pantry only, or describe a change.`
 
 Tool notation: `E` is one allowed `expense_entry.create`; `D(item)` is one allowed `diet_pantry.add` for that item; `Q` is the downstream status query specified by its own contract. `[]` means no business tool calls.
 
@@ -195,3 +195,43 @@ Tool notation: `E` is one allowed `expense_entry.create`; `D(item)` is one allow
 **Allowed trace.** `[E, D(durian-2.1kg-initial), D(durian-2100g-repaired)]` after the one confirmation.
 
 **Forbidden.** Replaying `E`; requesting a second confirmation solely for this adapter-only repair; retrying a non-deterministically changed payload; a second recognition run; exposing internal adapter parameters in the user-visible receipt.
+
+### C20 — one attachment succeeds and one attachment fails recognition
+
+**Input facts.** Two order screenshots belong to one attachment batch. Attachment 0 enters visual capability and succeeds. Attachment 1 enters visual capability but fails completely, so it has unavailable completeness and a stated failure limitation.
+
+**Expected response.** The global `recognition_run.status` is `failed`, not `partial`. Keep `preview_state: "draft"`, set fact-set quality to `unavailable`, set both projections to `null`, explain that one image could not be recognised, and request a retry or re-upload. Create no confirmation state or token.
+
+**Allowed trace.** `[]` only.
+
+**Forbidden.** Projecting facts from attachment 0; showing a partial business preview; asking for confirmation; calling either adapter or business writer.
+
+### C21 — one attachment succeeds and one is not executed
+
+**Input facts.** Two order screenshots belong to one attachment batch. Attachment 0 succeeds. Attachment 1 never enters visual capability and is recorded as `not_executed` with unavailable completeness.
+
+**Expected response.** The mixed batch is globally `failed` with an issue, fact-set quality `unavailable`, both projections `null`, and no preview or confirmation state. Explain that one image was skipped and request working all-attachment visual processing.
+
+**Allowed trace.** `[]` only.
+
+**Forbidden.** Calling the mixed batch `partial` or globally `not_executed`; using attachment 0 alone; creating a digest, confirmation prompt, adapter call, or business write.
+
+### C22 — succeeded plus usable partial attachments
+
+**Input facts.** Two screenshots both enter visual capability. Attachment 0 succeeds. Attachment 1 produces usable pixel-derived product facts but contains a cropped lower region, so its status and completeness are `partial` and its crop limitation is recorded.
+
+**Expected preview.** The global status is `partial`. Route only explicit supported facts, disclose the crop and omitted content, show the two fact-only projections that are independently executable, and await one later business confirmation.
+
+**Allowed trace.** `[]` before confirmation; selected executable adapter calls only after a later confirmation.
+
+**Forbidden.** Calling a usable crop a whole-attachment failure; guessing cropped rows; hiding the limitation; writing on the image turn.
+
+### C23 — no attachment enters visual capability
+
+**Input facts.** Every attachment in a multi-image batch is `not_executed`; `processed_attachment_count` is zero and each attachment has unavailable completeness.
+
+**Expected response.** The global status is `not_executed`, fact-set quality is unavailable, both projections are null, and there is no preview, confirmation state, adapter execution, or business write.
+
+**Allowed trace.** `[]` only.
+
+**Forbidden.** Labelling the batch `failed` or `partial`; claiming any image fact; asking the user to confirm unavailable data.

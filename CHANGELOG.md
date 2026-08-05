@@ -15,6 +15,8 @@
 
 ### Fixed
 
+- Corrected multi-attachment recognition aggregation so any failed attachment or mixed-batch skipped attachment fails closed with unavailable facts, null projections, no confirmation state, and zero business writes; usable cropped or folded images remain `partial`.
+
 - 视觉失败、未执行或附件覆盖不完整时失败关闭，禁止用附件描述或文件名填充事实。
 - 折叠订单如实报告可见和隐藏商品数量，不猜测未展示明细。
 

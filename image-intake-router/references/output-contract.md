@@ -12,7 +12,7 @@ Approved concise receipt example (also an example, not a mandatory fixed skeleto
 
 > 已记账 ¥65.48，完整保存了 7 种可见商品的名称、重量、数量和价格；食序管家成功入库 6 种，1 种因数量不明确未提交。
 
-After confirmation, state the completed business result and any safe omission reason. A failed or not-executed `recognition_run` produces no business preview or confirmation prompt; give a short failure explanation and ask for real visual capability or a re-upload instead.
+After confirmation, state the completed business result and any safe omission reason. A failed or not-executed `recognition_run` produces no business preview or confirmation prompt, no business projections, no adapter execution, and no business write; give a short failure explanation and ask for real visual capability or a re-upload instead. A whole attachment that failed or was skipped in a mixed batch cannot be presented as a partial preview.
 
 ## What remains visible
 

@@ -74,6 +74,7 @@
       },
       "then": {
         "properties": {
+          "preview_state": { "const": "draft" },
           "expense_projection": { "type": "null" },
           "diet_projection": { "type": "null" },
           "quality": {
@@ -98,7 +99,7 @@
     "recognitionRun": {
       "type": "object",
       "additionalProperties": false,
-      "description": "Mandatory pre-projection runtime validation: attachment_count equals source.image_count and attachments.length; attachments contain exactly one record for each unique contiguous attachment_index from 0 through attachment_count - 1; processed_attachment_count is derived from records that entered visual capability (all statuses except not_executed) and must not exceed attachment_count. Fail closed before any projection when any invariant is violated.",
+      "description": "Mandatory pre-projection runtime validation: attachment_count equals source.image_count and attachments.length; attachments contain exactly one record for each unique contiguous attachment_index from 0 through attachment_count - 1; processed_attachment_count equals the number of attachments whose status is not not_executed and must not exceed attachment_count. A succeeded run requires processed_attachment_count to equal attachment_count. Fail closed before any projection when any invariant is violated.",
       "required": ["status", "method", "attachment_count", "processed_attachment_count", "attachments", "issues"],
       "properties": {
         "status": { "enum": ["succeeded", "partial", "failed", "not_executed"] },
@@ -126,8 +127,8 @@
             "properties": {
               "processed_attachment_count": { "minimum": 1 },
               "attachments": {
-                "items": { "properties": { "status": { "enum": ["succeeded", "partial", "failed"] } } },
-                "contains": { "properties": { "status": { "enum": ["partial", "failed"] } }, "required": ["status"] },
+                "items": { "properties": { "status": { "enum": ["succeeded", "partial"] } } },
+                "contains": { "properties": { "status": { "const": "partial" } }, "required": ["status"] },
                 "minContains": 1
               }
             }
@@ -139,9 +140,17 @@
             "properties": {
               "processed_attachment_count": { "minimum": 1 },
               "attachments": {
-                "items": { "properties": { "status": { "enum": ["succeeded", "partial", "failed"] } } },
-                "contains": { "properties": { "status": { "const": "failed" } }, "required": ["status"] },
-                "minContains": 1
+                "items": { "properties": { "status": { "enum": ["succeeded", "partial", "failed", "not_executed"] } } },
+                "allOf": [
+                  {
+                    "contains": { "properties": { "status": { "enum": ["failed", "not_executed"] } }, "required": ["status"] },
+                    "minContains": 1
+                  },
+                  {
+                    "contains": { "properties": { "status": { "enum": ["succeeded", "partial", "failed"] } }, "required": ["status"] },
+                    "minContains": 1
+                  }
+                ]
               },
               "issues": { "minItems": 1 }
             }
