@@ -10,6 +10,18 @@ SKILL = SKILL_ROOT / "SKILL.md"
 REFERENCES = SKILL_ROOT / "references"
 SCHEMA = SKILL_ROOT / "templates" / "image-intake-router.schema.json"
 FIXTURES = Path(__file__).resolve().parent / "fixtures"
+PRODUCT_FACT_KEYS = {
+    "full_name", "normalized_name", "specification", "purchase_quantity", "quantity_unit",
+    "nominal_weight_or_volume", "actual_weight_or_volume", "billing_weight", "weight_variance",
+    "original_amount", "unit_price", "line_paid_amount", "refund_amount", "production_date",
+    "line_status", "item_type", "visibility_status",
+}
+ORDER_FACT_KEYS = {
+    "merchant", "transaction_time", "order_status", "goods_subtotal", "activity_discount",
+    "coupon_discount", "packaging_fee", "delivery_fee", "final_paid_amount", "refund_total",
+    "declared_item_kind_count", "recognized_item_kind_count", "hidden_item_kind_count",
+    "has_unexpanded_items", "content_complete",
+}
 
 
 class ProductContractTests(unittest.TestCase):
@@ -330,6 +342,13 @@ class RouterV21ProtocolContractTests(unittest.TestCase):
         ]
         self.assertEqual(len(partial["facts"]["products"]), 7)
         self.assertEqual(len(partial["expense_projection"]["line_items"]), 7)
+        self.assertEqual(set(partial["facts"]["order"]), ORDER_FACT_KEYS)
+        for product_row, expense_line in zip(partial["facts"]["products"], partial["expense_projection"]["line_items"]):
+            self.assertEqual(set(product_row), PRODUCT_FACT_KEYS)
+            self.assertEqual(set(expense_line) - {"field_metadata"}, PRODUCT_FACT_KEYS)
+            self.assertTrue({"confidence", "calculated", "evidence"}.issubset(expense_line["field_metadata"]))
+            self.assertIsNone(product_row["quantity_unit"]["value"])
+            self.assertIsNone(expense_line["quantity_unit"]["value"])
         self.assertEqual([(row["full_name"]["value"], row["specification"]["value"], row["line_paid_amount"]["value"]) for row in partial["facts"]["products"]], expected_rows)
         order = partial["facts"]["order"]
         self.assertEqual(order["declared_item_kind_count"]["value"], 9)
@@ -347,8 +366,9 @@ class RouterV21ProtocolContractTests(unittest.TestCase):
                 (row["full_name"]["value"], row["purchase_quantity"]["value"], row["quantity_unit"]["value"], row["nominal_weight_or_volume"]["value"], row["nominal_weight_or_volume"]["unit"])
                 for row in partial["diet_projection"]["business_products"]
             ],
-            [("甜玉米", 2, "个", 850, "g"), ("鲜牛奶", 1, "盒", 1.5, "L"), ("黄瓜", 1, "份", 700, "g"), ("西兰花", 1, "份", 600, "g"), ("豆浆", 2, "瓶", 1, "L"), ("云南生菜", 1, "份", 500, "g"), ("香蕉", 1, "份", 800, "g")],
+            [("甜玉米", 2, None, 850, "g"), ("鲜牛奶", 1, None, 1.5, "L"), ("黄瓜", 1, None, 700, "g"), ("西兰花", 1, None, 600, "g"), ("豆浆", 2, None, 1, "L"), ("云南生菜", 1, None, 500, "g"), ("香蕉", 1, None, 800, "g")],
         )
+        self.assertTrue(all(payload["display_unit"] is None for payload in partial["diet_projection"]["adapter_payload"]))
         for fixture in [durian, partial]:
             self.assertEqual(fixture["preview_state"], "awaiting_confirmation")
             self.assertEqual(fixture["source"], {"image_count": 1, "has_user_text": False})
