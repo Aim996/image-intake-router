@@ -326,12 +326,12 @@ VERSION_PATTERN = re.compile(r"^[0-9]+\.[0-9]+\.[0-9]+$")
 ROOT_FILES = ("VERSION", "README.md", "LICENSE", "CHANGELOG.md")
 DOC_FILES = ("docs/INSTALL.md", "docs/UPGRADING.md", "docs/AI-PROMPTS.md")
 REFERENCE_FILES = (
-    "confirmation-protocol.md",
-    "diet-adapter.md",
-    "expense-adapter.md",
-    "intent-routing.md",
-    "unified-facts.md",
-    "validation.md",
+    "calculation-rules.md",
+    "confirmation-and-execution.md",
+    "failure-recovery.md",
+    "output-contract.md",
+    "projection-contracts.md",
+    "recognition-rules.md",
 )
 
 
