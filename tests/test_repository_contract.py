@@ -164,18 +164,38 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertEqual([name for name in required if not (ROOT / name).is_file()], [])
 
     def test_version_is_consistent(self) -> None:
-        self.assertEqual(self.read("VERSION"), "2.0.1\n")
+        self.assertEqual(self.read("VERSION"), "2.1.0\n")
         for path in ["README.md", "项目说明.md", "CHANGELOG.md", "RELEASE_NOTES.md"]:
-            self.assertIn("2.0.0", self.read(path), path)
-        self.assertIn("version: 2.0.1", self.read("image-intake-router/SKILL.md"))
+            self.assertIn("2.1.0", self.read(path), path)
+        self.assertIn("version: 2.1.0", self.read("image-intake-router/SKILL.md"))
+
+    def test_v2_1_docs_preserve_v2_0_1_rollback_and_media_safety_contract(self) -> None:
+        combined = "\n".join(
+            self.read(path)
+            for path in [
+                "README.md", "项目说明.md", "后续迭代计划.md", "约束文档.md",
+                "CHANGELOG.md", "RELEASE_NOTES.md", "docs/INSTALL.md",
+                "docs/UPGRADING.md", "docs/AI-PROMPTS.md",
+            ]
+        )
+        for phrase in [
+            "2.1.0", "2.0.1", "image-intake-router.v2.1",
+            "https://github.com/openclaw/openclaw/blob/main/docs/nodes/media-understanding.md",
+            "https://docs.openclaw.ai/tools/media-overview",
+            "tools.media.image.attachments.mode: \"all\"", "maxAttachments",
+            "真实视觉", "失败关闭", "一次业务确认", "不猜测", "原图",
+        ]:
+            self.assertIn(phrase, combined, phrase)
+
+        for path in ["项目说明.md", "后续迭代计划.md", "约束文档.md"]:
+            self.assertTrue((ROOT / path).is_file(), path)
 
     def test_install_docs_name_exact_assets_platforms_and_layout(self) -> None:
         readme = self.read("README.md")
         install = self.read("docs/INSTALL.md")
         for phrase in [
-            "https://github.com/Aim996/image-intake-router/releases/tag/v2.0.1",
-            "image-intake-router-2.0.1.tgz",
-            "image-intake-router-2.0.1.tgz.sha256",
+            "image-intake-router-2.1.0.tgz",
+            "image-intake-router-2.1.0.tgz.sha256",
         ]:
             self.assertIn(phrase, readme + install)
         for phrase in [
@@ -184,7 +204,7 @@ class RepositoryContractTests(unittest.TestCase):
             "NAS",
             "Get-FileHash",
             "sha256sum -c",
-            "image-intake-router-2.0.1/image-intake-router/",
+            "image-intake-router-2.1.0/image-intake-router/",
             "<OPENCLAW_SKILLS_DIR>",
         ]:
             self.assertIn(phrase, install)
@@ -192,10 +212,10 @@ class RepositoryContractTests(unittest.TestCase):
 
     def test_docs_cover_required_operations(self) -> None:
         expected = {
-            "README.md": ["GitHub Release", "数据保存位置", "回滚", "MIT"],
-            "docs/INSTALL.md": ["SHA-256", "OpenClaw", "真实验收", "food-image-intake"],
-            "docs/UPGRADING.md": ["更新前", "固定版本", "回滚", "未修改数据库"],
-            "docs/AI-PROMPTS.md": ["全新安装提示词", "安全更新提示词", "安装验收提示词"],
+            "README.md": ["Data boundary", "rollback", "MIT"],
+            "docs/INSTALL.md": ["SHA-256", "OpenClaw", "业务级 UAT", "food-image-intake"],
+            "docs/UPGRADING.md": ["更新", "2.1.0", "回滚", "数据库"],
+            "docs/AI-PROMPTS.md": ["全新安装提示词", "安全更新提示词", "UAT 提示词"],
         }
         for path, phrases in expected.items():
             text = self.read(path)

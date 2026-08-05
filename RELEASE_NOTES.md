@@ -1,23 +1,13 @@
-# image-intake-router 2.0.1 Release Notes
+# image-intake-router 2.1.0 Release Notes
 
-2.0.0 的发布历史保持不变；本说明仅描述 2.0.1 的发布与安装。
+## 主要变化
 
-## 安装
+2.1.0 将图片处理升级为一次真实像素/媒体识别后的统一详细事实：商品名、规格、数量、重量/容量、实付、退款、商家、时间、状态、来源、置信度和图片完整性可被下游安全复用。随手账收到标量商品明细（名称、规格、数量、实付与退款），食序管家复用同一事实，不再进行第二次读图。
 
-从 [GitHub Release v2.0.1](https://github.com/Aim996/image-intake-router/releases/tag/v2.0.1) 下载 `image-intake-router-2.0.1.tgz` 与 `image-intake-router-2.0.1.tgz.sha256`，先核验 SHA-256，再按 [安装指南](docs/INSTALL.md) 仅安装嵌套的 `image-intake-router-2.0.1/image-intake-router/` 到 OpenClaw 的 Skill 目录。安装过程不会自动替换正在运行的配置。
+初始图片回合只给简洁预览、零业务写入；用户随后只确认一次业务内容。视觉结果缺失、失败或有任一附件未执行时失败关闭；部分或折叠图片会报告可见和隐藏数量，绝不猜测。
 
-## 更新
+## 安装与回滚
 
-升级前请完成备份并停止旧版入口。使用固定版本 2.0.1，而不是不受约束的最新版本；详细流程见 [升级与回滚](docs/UPGRADING.md)。
+发布时使用精确资产 `image-intake-router-2.1.0.tgz` 与 `image-intake-router-2.1.0.tgz.sha256`。按 [安装指南](docs/INSTALL.md) 配置真实图片能力、全附件处理和 SHA-256 校验，然后只安装嵌套 Skill 目录。
 
-## 数据与迁移
-
-本版本只提供 Skill 契约与识别路由规则，不迁移、不创建也不修改业务数据库。请保留现有数据，并在完成真实验收后再启用新 Skill。
-
-## 已知限制
-
-`food-image-intake` 与 `image-intake-router` 不能同时激活，避免同一图片被重复识别。没有像素的图片描述只能按用户提供的事实处理，不能声称看到了图片。
-
-## 回滚
-
-停用 2.0.1、恢复先前已验证版本的 Skill 目录和 OpenClaw 配置，然后执行健康检查。回滚不会修改数据库。
+v2.0.1 的历史、[tag URL](https://github.com/Aim996/image-intake-router/releases/tag/v2.0.1)、`image-intake-router-2.0.1.tgz` 和校验文件保持不变，作为可恢复的回滚目标。此次发布不迁移、覆盖或创建下游数据库。

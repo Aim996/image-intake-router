@@ -5,7 +5,7 @@ user-invocable: true
 metadata:
   openclaw:
     emoji: "📷"
-    version: 2.0.1
+    version: 2.1.0
 ---
 
 # Image intake router
