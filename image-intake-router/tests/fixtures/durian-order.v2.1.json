@@ -1,0 +1,47 @@
+{
+  "schema_version": "image-intake-router.v2.1",
+  "recognition_run": {
+    "status": "succeeded",
+    "method": "native_vision",
+    "attachment_count": 1,
+    "processed_attachment_count": 1,
+    "attachments": [{"attachment_index": 0, "status": "succeeded", "completeness": "complete", "limitations": []}],
+    "issues": []
+  },
+  "facts": {
+    "order": {
+      "final_paid_amount": {"value": 119.0, "currency": "CNY", "confidence": 0.99, "calculated": false, "evidence": [{"source": "visible_label", "value": "实付¥119.00"}]},
+      "refund_total": {"value": 12.92, "currency": "CNY", "confidence": 0.98, "calculated": false, "evidence": [{"source": "visible_label", "value": "退款¥12.92"}]}
+    },
+    "products": [{
+      "full_name": {"value": "猫山王榴莲", "confidence": 0.98, "calculated": false, "evidence": [{"source": "visible_label", "value": "猫山王榴莲"}]},
+      "normalized_name": {"value": "榴莲", "confidence": 0.94, "calculated": false, "evidence": [{"source": "visible_label", "value": "猫山王榴莲"}]},
+      "specification": {"value": "约2.1kg", "confidence": 0.97, "calculated": false, "evidence": [{"source": "visible_label", "value": "约2.1kg"}]},
+      "purchase_quantity": {"value": 1, "unit": "盒", "confidence": 0.99, "calculated": false, "evidence": [{"source": "visible_label", "value": "×1盒"}]},
+      "quantity_unit": {"value": "盒", "confidence": 0.99, "calculated": false, "evidence": [{"source": "visible_label", "value": "×1盒"}]},
+      "nominal_weight_or_volume": {"value": 2.1, "unit": "kg", "confidence": 0.97, "calculated": false, "evidence": [{"source": "visible_label", "value": "约2.1kg"}]},
+      "actual_weight_or_volume": {"value": null, "unit": "kg", "confidence": 0.0, "calculated": false, "evidence": []},
+      "billing_weight": {"value": null, "unit": "kg", "confidence": 0.0, "calculated": false, "evidence": []},
+      "weight_variance": {"value": 228, "unit": "g", "confidence": 0.96, "calculated": false, "evidence": [{"source": "visible_label", "value": "缺重228g"}]},
+      "original_amount": {"value": null, "currency": "CNY", "confidence": 0.0, "calculated": false, "evidence": []},
+      "unit_price": {"value": null, "currency": "CNY", "confidence": 0.0, "calculated": false, "evidence": []},
+      "line_paid_amount": {"value": 119.0, "currency": "CNY", "confidence": 0.99, "calculated": false, "evidence": [{"source": "visible_label", "value": "实付¥119.00"}]},
+      "refund_amount": {"value": 12.92, "currency": "CNY", "confidence": 0.98, "calculated": false, "evidence": [{"source": "visible_label", "value": "退款¥12.92"}]},
+      "production_date": {"value": null, "confidence": 0.0, "calculated": false, "evidence": []},
+      "line_status": {"value": "purchased_and_received", "confidence": 0.98, "calculated": false, "evidence": [{"source": "visible_label", "value": "已收货"}]},
+      "item_type": {"value": "food", "confidence": 0.99, "calculated": false, "evidence": [{"source": "visible_label", "value": "榴莲"}]},
+      "visibility_status": {"value": "visible", "confidence": 1.0, "calculated": false, "evidence": [{"source": "visible_label", "value": "商品明细"}]}
+    }]
+  },
+  "expense_projection": {
+    "executable": true,
+    "detail_completeness": "complete",
+    "omitted_item_count": 0,
+    "line_items": [{"full_name": {"value": "猫山王榴莲"}, "specification": {"value": "约2.1kg"}, "purchase_quantity": {"value": 1, "unit": "盒"}, "nominal_weight_or_volume": {"value": 2.1, "unit": "kg"}, "weight_variance": {"value": 228, "unit": "g"}, "line_paid_amount": {"value": 119.0, "currency": "CNY"}, "refund_amount": {"value": 12.92, "currency": "CNY"}}]
+  },
+  "pantry_projection": {
+    "executable": true,
+    "business_products": [{"full_name": {"value": "猫山王榴莲"}, "purchase_quantity": {"value": 1, "unit": "盒"}, "quantity_unit": {"value": "盒"}, "nominal_weight_or_volume": {"value": 2.1, "unit": "kg"}}],
+    "adapter_payload": [{"source_product_index": 0, "quantity": 2100, "unit": "g", "display_quantity": 1, "display_unit": "盒"}]
+  }
+}

@@ -9,6 +9,7 @@ SKILL_ROOT = VERSION_ROOT / "image-intake-router"
 SKILL = SKILL_ROOT / "SKILL.md"
 REFERENCES = SKILL_ROOT / "references"
 SCHEMA = SKILL_ROOT / "templates" / "image-intake-router.schema.json"
+FIXTURES = Path(__file__).resolve().parent / "fixtures"
 
 
 class ProductContractTests(unittest.TestCase):
@@ -211,6 +212,132 @@ class ProductContractTests(unittest.TestCase):
             r"必须保留可见线索、假设、低值/中心值/高值范围和主要不确定性；"
             r"不得冒充或覆盖 `visible_label`、`user_text` 或 `calculated`。",
         )
+
+
+class RouterV21ProtocolContractTests(unittest.TestCase):
+    """Contract tests for the v2.1 protocol introduced before its implementation."""
+
+    def schema(self) -> dict:
+        return json.loads(SCHEMA.read_text(encoding="utf-8"))
+
+    def fixture(self, name: str) -> dict:
+        return json.loads((FIXTURES / name).read_text(encoding="utf-8"))
+
+    def test_schema_declares_v21_recognition_run(self) -> None:
+        schema = self.schema()
+        self.assertEqual(schema["properties"]["schema_version"]["const"], "image-intake-router.v2.1")
+        self.assertIn("recognition_run", schema["required"])
+        self.assertIn("recognition_run", schema["properties"])
+
+    def test_recognition_run_records_attachment_coverage_and_methods(self) -> None:
+        defs = self.schema()["$defs"]
+        self.assertTrue("recognitionRun" in defs, "v2.1 must define the recognition-run record")
+        recognition = defs["recognitionRun"]
+        self.assertEqual(
+            recognition["properties"]["status"]["enum"],
+            ["succeeded", "partial", "failed", "not_executed"],
+        )
+        self.assertEqual(
+            recognition["properties"]["method"]["enum"],
+            ["native_vision", "media_understanding"],
+        )
+        self.assertTrue({"attachment_count", "processed_attachment_count", "attachments", "issues"}.issubset(recognition["required"]))
+        self.assertTrue("recognitionAttachment" in defs, "v2.1 must define per-attachment recognition details")
+        attachment = defs["recognitionAttachment"]
+        self.assertTrue({"status", "completeness", "limitations"}.issubset(attachment["required"]))
+
+    def test_unsuccessful_recognition_blocks_executable_projections(self) -> None:
+        rules = self.schema()["allOf"]
+        guards = [
+            rule for rule in rules
+            if rule.get("if", {}).get("properties", {}).get("recognition_run", {}).get("properties", {}).get("status", {}).get("enum")
+            == ["failed", "not_executed"]
+        ]
+        self.assertEqual(len(guards), 1, "v2.1 must gate failed and not-executed recognition")
+        guard = guards[0]
+        guarded = guard["then"]["properties"]
+        self.assertEqual(guarded["quality"]["properties"]["fact_set_status"]["const"], "unavailable")
+        self.assertFalse(guarded["expense_projection"]["properties"]["executable"]["const"])
+        self.assertFalse(guarded["pantry_projection"]["properties"]["executable"]["const"])
+
+    def test_fact_wrappers_and_evidence_are_v21_ready(self) -> None:
+        defs = self.schema()["$defs"]
+        self.assertEqual(
+            defs["evidenceRecord"]["properties"]["source"]["enum"],
+            ["visible_label", "user_text", "calculated", "reference_database", "visual_estimate"],
+        )
+        for wrapper in ["textFact", "amountFact", "quantityFact", "dateFact", "booleanFact"]:
+            properties = defs[wrapper]["properties"]
+            self.assertTrue({"confidence", "calculated", "evidence"}.issubset(properties))
+            self.assertEqual(properties["confidence"]["minimum"], 0)
+            self.assertEqual(properties["confidence"]["maximum"], 1)
+
+    def test_schema_exposes_unified_product_order_and_projection_shapes(self) -> None:
+        defs = self.schema()["$defs"]
+        self.assertTrue("productFacts" in defs, "v2.1 must define unified product facts")
+        self.assertTrue("pantryProjection" in defs, "v2.1 must separate pantry business facts and adapter payload")
+        product = defs["productFacts"]["properties"]
+        self.assertTrue({"full_name", "normalized_name", "specification", "purchase_quantity", "quantity_unit", "nominal_weight_or_volume", "actual_weight_or_volume", "billing_weight", "weight_variance", "original_amount", "unit_price", "line_paid_amount", "refund_amount", "production_date", "line_status", "item_type", "visibility_status"}.issubset(product))
+        order = defs["orderFacts"]["properties"]
+        self.assertTrue({"merchant", "transaction_time", "order_status", "goods_subtotal", "activity_discount", "coupon_discount", "packaging_fee", "delivery_fee", "final_paid_amount", "refund_total", "declared_item_kind_count", "recognized_item_kind_count", "hidden_item_kind_count", "has_unexpanded_items", "content_complete"}.issubset(order))
+        expense = defs["expenseProjection"]["properties"]
+        self.assertTrue({"line_items", "detail_completeness", "omitted_item_count"}.issubset(expense))
+        pantry = defs["pantryProjection"]["properties"]
+        self.assertTrue({"business_products", "adapter_payload"}.issubset(pantry))
+
+    def test_literal_v21_fixtures_preserve_visible_facts_and_order_completeness(self) -> None:
+        durian = self.fixture("durian-order.v2.1.json")
+        partial = self.fixture("partial-nine-item-order.v2.1.json")
+
+        self.assertEqual(durian["schema_version"], "image-intake-router.v2.1")
+        self.assertEqual(durian["recognition_run"]["status"], "succeeded")
+        self.assertEqual(durian["recognition_run"]["attachment_count"], 1)
+        self.assertEqual(durian["recognition_run"]["processed_attachment_count"], 1)
+        product = durian["facts"]["products"][0]
+        self.assertEqual(product["full_name"]["value"], "猫山王榴莲")
+        self.assertEqual(product["normalized_name"]["value"], "榴莲")
+        self.assertEqual(product["specification"]["value"], "约2.1kg")
+        self.assertEqual(product["purchase_quantity"]["value"], 1)
+        self.assertEqual(product["quantity_unit"]["value"], "盒")
+        self.assertEqual(product["nominal_weight_or_volume"]["value"], 2.1)
+        self.assertEqual(product["nominal_weight_or_volume"]["unit"], "kg")
+        self.assertIsNone(product["actual_weight_or_volume"]["value"])
+        self.assertEqual(product["weight_variance"]["value"], 228)
+        self.assertEqual(product["weight_variance"]["unit"], "g")
+        self.assertEqual(product["line_paid_amount"]["value"], 119.00)
+        self.assertEqual(product["refund_amount"]["value"], 12.92)
+        self.assertEqual(durian["facts"]["order"]["final_paid_amount"]["value"], 119.00)
+        self.assertEqual(durian["facts"]["order"]["refund_total"]["value"], 12.92)
+        self.assertEqual(product["line_status"]["value"], "purchased_and_received")
+        self.assertTrue({"confidence", "calculated", "evidence"}.issubset(product["full_name"]))
+        self.assertEqual(durian["expense_projection"]["line_items"][0]["line_paid_amount"]["value"], 119.00)
+        business_product = durian["pantry_projection"]["business_products"][0]
+        self.assertEqual(business_product["nominal_weight_or_volume"]["value"], 2.1)
+        self.assertEqual(business_product["purchase_quantity"]["value"], 1)
+        self.assertEqual(business_product["quantity_unit"]["value"], "盒")
+
+        self.assertEqual(partial["recognition_run"]["status"], "succeeded")
+        self.assertEqual(partial["recognition_run"]["attachment_count"], 1)
+        self.assertEqual(partial["facts"]["order"]["final_paid_amount"]["value"], 65.48)
+        expected_rows = [
+            ("甜玉米", "约850 g × 2", 11.78), ("鲜牛奶", "1.5 L × 1", 10.90), ("黄瓜", "约700 g × 1", 4.99),
+            ("西兰花", "约600 g × 1", 3.95), ("豆浆", "1 L × 2", 13.00), ("云南生菜", "约500 g × 1", 4.96),
+            ("香蕉", "约800 g × 1", 11.90),
+        ]
+        self.assertEqual(len(partial["facts"]["products"]), 7)
+        self.assertEqual(len(partial["expense_projection"]["line_items"]), 7)
+        self.assertEqual([(row["full_name"]["value"], row["specification"]["value"], row["line_paid_amount"]["value"]) for row in partial["facts"]["products"]], expected_rows)
+        order = partial["facts"]["order"]
+        self.assertEqual(order["declared_item_kind_count"]["value"], 9)
+        self.assertEqual(order["recognized_item_kind_count"]["value"], 7)
+        self.assertEqual(order["hidden_item_kind_count"]["value"], 2)
+        self.assertTrue(order["has_unexpanded_items"]["value"])
+        self.assertFalse(order["content_complete"]["value"])
+        self.assertEqual(partial["expense_projection"]["detail_completeness"], "partial")
+        self.assertEqual(partial["expense_projection"]["omitted_item_count"], 2)
+        self.assertNotIn("hidden_products", partial["facts"])
+        for fixture in [durian, partial]:
+            self.assertNotIn("attachment_context", json.dumps(fixture, ensure_ascii=False))
 
 
 if __name__ == "__main__":
