@@ -63,6 +63,11 @@ class RouterV3FixtureSchemaTests(unittest.TestCase):
             sum(row["status"] != "not_executed" for row in attachments),
         )
 
+    def assert_runtime_handoff_invariants(self, record: dict) -> None:
+        handoff = record["handoff"]
+        if handoff is not None:
+            self.assertEqual(record["preview_id"], handoff["preview_id"])
+
     def test_every_shipped_v3_fixture_is_a_complete_draft_2020_12_instance(self) -> None:
         fixtures = sorted(FIXTURES.glob("*.v3.json"))
         self.assertGreater(len(fixtures), 0)
@@ -146,13 +151,28 @@ class RouterV3FixtureSchemaTests(unittest.TestCase):
                 refinement = run["refinement"]
                 refinement["status"] = "not_applicable"
                 self.assert_schema_valid(record)
-                self.assertFalse(refinement["reason"])
+                self.assertEqual(refinement["reasons"], [])
                 self.assertEqual(refinement["targeted_fields"], [])
                 self.assertEqual(refinement["attachment_indexes"], [])
+                self.assertEqual(refinement["issues"], [])
                 self.assertIsNone(record["cleaned_text"])
                 self.assertIsNone(record["accounting_content"])
                 self.assertIsNone(record["inventory_content"])
                 self.assertIsNone(record["handoff"])
+
+                actionable = self.fixture("durian-order.v3.json")
+                handed_off = self.fixture("handed-off.v3.json")
+                unsafe_values = {
+                    "cleaned_text": actionable["cleaned_text"],
+                    "accounting_content": actionable["accounting_content"],
+                    "inventory_content": actionable["inventory_content"],
+                    "handoff": handed_off["handoff"],
+                }
+                for field, value in unsafe_values.items():
+                    with self.subTest(status=status, field=field):
+                        unsafe = copy.deepcopy(record)
+                        unsafe[field] = value
+                        self.assert_schema_invalid(unsafe)
 
     def test_refinement_statuses_enforce_valid_pass_count_combinations(self) -> None:
         failed_initial = self.fixture("failed-recognition.v3.json")
@@ -165,18 +185,55 @@ class RouterV3FixtureSchemaTests(unittest.TestCase):
                 refinement = run["refinement"]
                 refinement["status"] = "not_applicable"
                 self.assert_schema_valid(record)
-                self.assertFalse(refinement["reason"])
+                self.assertEqual(refinement["reasons"], [])
                 self.assertEqual(refinement["targeted_fields"], [])
                 self.assertEqual(refinement["attachment_indexes"], [])
+                self.assertEqual(refinement["issues"], [])
+
+                for refinement_status in ["not_needed", "succeeded", "partial", "failed"]:
+                    invalid = copy.deepcopy(record)
+                    invalid["recognition_run"]["refinement"]["status"] = refinement_status
+                    self.assert_schema_invalid(invalid)
+
+        not_executed = copy.deepcopy(failed_initial)
+        not_executed_run = not_executed["recognition_run"]
+        not_executed_run["status"] = "not_executed"
+        not_executed_run["pass_count"] = 0
+        not_executed_run["processed_attachment_count"] = 0
+        not_executed_run["refinement"]["status"] = "not_applicable"
+        for attachment in not_executed_run["attachments"]:
+            attachment["status"] = "not_executed"
+            attachment["completeness"] = "unavailable"
+        self.assert_schema_valid(not_executed)
+        for pass_count in [1, 2]:
+            invalid = copy.deepcopy(not_executed)
+            invalid["recognition_run"]["pass_count"] = pass_count
+            self.assert_schema_invalid(invalid)
 
         not_needed = self.fixture("partial-nine-item-order.v3.json")
         run = not_needed["recognition_run"]
         self.assertEqual(run["pass_count"], 1)
         self.assertEqual(run["refinement"]["status"], "not_needed")
-        self.assertFalse(run["refinement"]["reason"])
+        self.assertEqual(run["refinement"]["reasons"], [])
         self.assertEqual(run["refinement"]["targeted_fields"], [])
         self.assertEqual(run["refinement"]["attachment_indexes"], [])
+        self.assertEqual(run["refinement"]["issues"], [])
         self.assert_schema_valid(not_needed)
+        for field, value in [
+            ("reasons", ["visible-field omission"]),
+            ("targeted_fields", ["nominal_weight_or_volume"]),
+            ("attachment_indexes", [0]),
+            ("issues", ["unexpected refinement issue"]),
+        ]:
+            with self.subTest(not_needed_nonempty=field):
+                invalid = copy.deepcopy(not_needed)
+                invalid["recognition_run"]["refinement"][field] = value
+                self.assert_schema_invalid(invalid)
+        for pass_count in [0, 2]:
+            with self.subTest(not_needed_pass_count=pass_count):
+                invalid = copy.deepcopy(not_needed)
+                invalid["recognition_run"]["pass_count"] = pass_count
+                self.assert_schema_invalid(invalid)
 
         succeeded = self.fixture("durian-order.v3.json")
         for refinement_status, aggregate_status in [
@@ -191,10 +248,28 @@ class RouterV3FixtureSchemaTests(unittest.TestCase):
                 run["pass_count"] = 2
                 refinement = run["refinement"]
                 refinement["status"] = refinement_status
-                self.assertGreater(len(refinement["reason"]), 0)
+                self.assertGreater(len(refinement["reasons"]), 0)
                 self.assertGreater(len(refinement["targeted_fields"]), 0)
                 self.assertGreater(len(refinement["attachment_indexes"]), 0)
+                self.assertGreater(len(refinement["issues"]), 0)
                 self.assert_schema_valid(record)
+
+                for pass_count in [0, 1]:
+                    with self.subTest(refinement_status=refinement_status, pass_count=pass_count):
+                        invalid = copy.deepcopy(record)
+                        invalid["recognition_run"]["pass_count"] = pass_count
+                        self.assert_schema_invalid(invalid)
+                for field in ["reasons", "targeted_fields", "attachment_indexes", "issues"]:
+                    with self.subTest(refinement_status=refinement_status, empty=field):
+                        invalid = copy.deepcopy(record)
+                        invalid["recognition_run"]["refinement"][field] = []
+                        self.assert_schema_invalid(invalid)
+
+        aggregate_failed = copy.deepcopy(succeeded)
+        aggregate_failed["recognition_run"]["status"] = "failed"
+        aggregate_failed["recognition_run"]["pass_count"] = 2
+        aggregate_failed["recognition_run"]["refinement"]["status"] = "failed"
+        self.assert_schema_invalid(aggregate_failed)
 
     def test_initial_preview_has_no_handoff_and_handed_off_is_singular(self) -> None:
         for name, recognition_status in [
@@ -211,14 +286,23 @@ class RouterV3FixtureSchemaTests(unittest.TestCase):
         self.assertEqual(handed_off["preview_state"], "handed_off")
         self.assertIsNotNone(handed_off["handoff"])
         self.assert_schema_valid(handed_off)
+        self.assert_runtime_handoff_invariants(handed_off)
 
-        corrected_preview = copy.deepcopy(handed_off)
-        corrected_preview["preview_state"] = "awaiting_confirmation"
-        self.assert_schema_invalid(corrected_preview)
+        missing_handoff = copy.deepcopy(handed_off)
+        missing_handoff["handoff"] = None
+        self.assert_schema_invalid(missing_handoff)
 
-        duplicate_handoff = copy.deepcopy(handed_off)
-        duplicate_handoff["handoffs"] = [handed_off["handoff"], handed_off["handoff"]]
-        self.assert_schema_invalid(duplicate_handoff)
+        corrected_preview = self.fixture("corrected-preview.v3.json")
+        self.assertEqual(corrected_preview["preview_state"], "awaiting_confirmation")
+        self.assertNotEqual(corrected_preview["preview_id"], handed_off["preview_id"])
+        self.assertIsNone(corrected_preview["handoff"])
+        self.assert_schema_valid(corrected_preview)
+
+        duplicate_confirmation = self.fixture("duplicate-confirmation.v3.json")
+        self.assertEqual(duplicate_confirmation["preview_id"], handed_off["preview_id"])
+        self.assertEqual(duplicate_confirmation["handoff"], handed_off["handoff"])
+        self.assert_schema_valid(duplicate_confirmation)
+        self.assert_runtime_handoff_invariants(duplicate_confirmation)
 
 
 if __name__ == "__main__":

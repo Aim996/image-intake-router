@@ -148,7 +148,7 @@ class RouterV3ProtocolContractTests(unittest.TestCase):
         self.assertEqual(run["properties"]["pass_count"]["maximum"], 2)
         refinement = defs["refinementRun"]
         self.assertTrue(
-            {"status", "reason", "targeted_fields", "attachment_indexes"}.issubset(
+            {"status", "reasons", "targeted_fields", "attachment_indexes", "issues"}.issubset(
                 refinement["required"]
             )
         )
@@ -156,6 +156,8 @@ class RouterV3ProtocolContractTests(unittest.TestCase):
             refinement["properties"]["status"]["enum"],
             ["not_applicable", "not_needed", "succeeded", "partial", "failed"],
         )
+        for field in ["reasons", "targeted_fields", "attachment_indexes", "issues"]:
+            self.assertEqual(refinement["properties"][field]["type"], "array")
         self.assertEqual(refinement["properties"]["attachment_indexes"]["uniqueItems"], True)
 
     def test_schema_keeps_recognition_and_fact_records_strict_and_evidenced(self) -> None:
@@ -191,6 +193,12 @@ class RouterV3ProtocolContractTests(unittest.TestCase):
         attachment = json.loads(self.read(SCHEMA))["$defs"]["recognitionAttachment"]
         self.assertTrue({"attachment_index", "status"}.issubset(attachment["required"]))
         self.assertEqual(attachment["properties"]["attachment_index"]["minimum"], 0)
+        for phrase in [
+            "Mandatory runtime validation",
+            "attachment_count equals source.image_count",
+            "unique contiguous attachment_index",
+        ]:
+            self.assertIn(phrase, recognition["description"])
 
 
 if __name__ == "__main__":
