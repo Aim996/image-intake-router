@@ -152,7 +152,7 @@ def _smoke_check(installed_skill: Path, version: str) -> None:
     )
     schema = json.loads(schema_path.read_text(encoding="utf-8"))
     schema_version = schema["properties"]["schema_version"]["const"]
-    if schema_version != "image-intake-router.v2":
+    if schema_version != "image-intake-router.v2.1":
         raise ValueError(f"unexpected schema version: {schema_version}")
 
 

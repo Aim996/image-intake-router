@@ -1,25 +1,14 @@
-# 更新与回滚 image-intake-router
+# 更新与回滚 image-intake-router 2.1.0
 
-## 更新前检查
+## 安全更新
 
-记录当前已验证版本，备份 OpenClaw 配置与已有 Skill 目录，并确认旧版 `food-image-intake` 不会与新版本同时运行。更新前不删除任何现有数据或数据库文件。
+1. 记录当前版本，备份 OpenClaw 配置，并保留已验证的 v2.0.1 Skill 目录和 [v2.0.1 Release](https://github.com/Aim996/image-intake-router/releases/tag/v2.0.1) 资产。
+2. 直接复制执行 [安装指南](INSTALL.md) 中对应系统的 GitHub Release 命令：它会下载固定的 `v2.1.0` 资产、校验 SHA-256、解压真正的 Skill 目录，并运行 `openclaw skills install ... --global --as image-intake-router` 刷新已安装副本。不要改成 `main`、`latest` 或未经校验的地址。
+3. 配置真实图片能力和 `tools.media.image.attachments.mode: "all"`，确保 `maxAttachments` 覆盖你的订单图片数量；不要在 `tools.media.models[]` 内联 API key。
+4. 只启用 `image-intake-router`，停用会造成重复识别的旧入口，重载后完成完整业务级 UAT。
 
-## 下载固定版本
-
-从 [GitHub Release v2.0.1](https://github.com/Aim996/image-intake-router/releases/tag/v2.0.1) 下载固定版本 `2.0.1` 的 `image-intake-router-2.0.1.tgz` 与 `image-intake-router-2.0.1.tgz.sha256`，核验完成前不解压到生产 Skill 目录。
-
-## 安装新版本
-
-把新版本安装到新的目录，按照 [安装指南](INSTALL.md) 配置 OpenClaw，并仅启用 `image-intake-router`。不要覆盖不相关项目，也不要通过 shell 输出单独认定安装成功。
-
-## 健康检查
-
-重载后执行一轮真实验收：确认首轮只产生预览、确认前零业务写入，以及确认后仅执行所选范围。检查版本为 2.0.1。
+不能因文件已复制、Skill 已发现或命令没有报错而宣布更新成功。必须证明每个附件一次真实视觉运行、失败关闭、部分图片如实披露、初始零写入和一次确认。
 
 ## 回滚
 
-停用 2.0.1，恢复更新前记录的固定版本和 OpenClaw 配置，重载后重复健康检查。保留故障现场以便排查。
-
-## 数据安全结论
-
-更新和回滚未修改数据库；本 Skill 不创建、迁移或写入本地业务数据库。任何数据操作都应由下游系统在用户确认后独立完成。
+若 UAT 不通过，停用 2.1.0，恢复保留的 2.0.1 Skill 目录及配置，重载并重复健康检查。回滚不覆盖随手账或食序管家的数据库：路由器本身没有业务数据库，也不执行数据库迁移。

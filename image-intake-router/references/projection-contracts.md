@@ -5,7 +5,7 @@
 
 ## `expense_projection`
 
-费用投影是严格对象，且**只能**有以下八个字段，顺序为：
+费用投影是严格对象，且**只能**有以下十一个字段，顺序为：
 
 1. `executable`：布尔值。
 2. `amount`：正的人民币元数值，或 `null`。
@@ -15,20 +15,26 @@
 6. `merchant`：商家名，或 `null`。
 7. `note`：商品备注，或 `null`；最长 1000 个字符。
 8. `issues`：未解决问题的字符串数组。
+9. `line_items`：从规范事实适配出的 v0.3 账本公开标量行数组。
+10. `detail_completeness`：`complete`、`partial` 或 `unavailable`。
+11. `omitted_item_count`：未包含在 `line_items` 中、但已知存在的商品种类数。
 
-`executable: true` 时，`amount`、`category_id` 与 `occurred_at` 必须非空；执行器以
-`expense_entry(action="create")` 提交它们和恒定的 `source_kind: "image"`。只有
-`merchant`、`note` 非空时才传入这两个可选公开参数。不得传 `entry_type`，也不得传
-任何其他未声明字段。
+`executable: true` 时，`amount`、`category_id` 与 `occurred_at` 必须非空。执行 `expense_entry(action="create")` 的公开参数白名单只有：必传的 `amount`、`category_id`、`occurred_at` 与恒定 `source_kind: "image"`；非空时可选的 `merchant`、`note`；以及存在时可选的 v0.3 结构化 `line_items`（1 至 100 项）。完成适配的账本公开 `line_items` 投影必须原样转发，不能静默丢弃或缩减为 `note`。不得传 `entry_type` 或任何其他字段，尤其不得传路由器内部的 `executable`、`detail_completeness`、`omitted_item_count` 或 `issues`。
 
 `amount` 的范围必须与公开账本 Schema 一致：大于 0 且不超过 `9999999999.99`。`occurred_at`
 必须是 20 到 40 个字符的带时区 ISO 8601 时间；这两个边界在基础投影和可执行分支都必须
 保持一致。
 
+`expense_projection` 同时包含路由器预览状态和下游公开账本写入 payload；其公开参数白名单以上述规则为准。`executable`、`detail_completeness`、`omitted_item_count` 和 `issues` 是路由器内部元数据，绝不作为账本参数；若已安装账本未声明 `line_items`，必须标记兼容性不满足为不可执行/错误，而不是删除明细或调用旧 payload。
+
 一张票据或一笔订单只产生一笔费用投影，绝不按商品拆账。若存在可识别的实际购买商品，
-`note` 必须列出所有这些商品名称，包括非食品；它不是单品价目表。只有带唯一、直接的
+`note` 是面向人的简短摘要，在长度允许时列出商品名称（包括非食品），但从不作为完整单品清单或价目表。只有带唯一、直接的
 最终实付标签的金额可填入 `amount`；原价、小计、优惠、运费、服务费、退款或其他辅助
 金额绝不能替代它。
+
+`facts.products` 保留每个可见商品的完整结构化业务事实；`line_items` 则保留其可写入账本公开契约的确定性标量投影，独立于最长 1000 字符、面向人的 `note`。`note` 截断或概括时不得删除 `line_items` 的可见投影。`detail_completeness: "complete"` 仅表示商品明细完整且 `omitted_item_count` 为 0；`"partial"` 表示只路由可见明细，并把已知未展开、隐藏或裁切的商品种类计入 `omitted_item_count`；`"unavailable"` 表示没有可安全路由的商品明细。`omitted_item_count` 只计数已知遗漏，未知数目不得伪造为完整。
+
+只有 `facts.products` 中 `full_name.value` 已知且非空、并且 `purchase_quantity.value` 为正数的商品行才可进入适配器；适配器把它们分别投影为 `full_name` 与 `quantity`，而图片未显示的 `quantity_unit` 必须省略。其他已识别但不满足这两个账本边界的事实保留在统一 `facts` 与相关问题中，不得伪造为可写入的 `line_items`。
 
 `executable: false` 时，`amount`、`category_id`、`occurred_at`、`merchant` 与 `note`
 均为 `null`，并且 `issues` 至少包含一个面向人的不执行原因。`source_kind` 仍是
@@ -38,6 +44,8 @@
 
 饮食投影是严格对象，必有 `items`、`item_audit`、`excluded_items` 与 `uncertain_items` 四个数组。
 空数组是有效结果；没有 `items` 即没有可提交的入库写入。
+
+`business_products` 保留统一的业务商品事实，`adapter_payload` 则是独立的技术归一化输入；两者都不替换原始 `facts`，也不替换传给下游公开工具的 `items` 写入 payload。
 
 `items` 的每个元素就是一个严格的 `diet_pantry(action="add")` 公开参数对象，而不是
 路由器私有的中间格式。它只可使用下列、已经由下游公开 Schema 声明的字段：
@@ -85,3 +93,29 @@
 # Positive order-expense recipe
 
 When one order has one unique, directly labelled final-paid amount and its ordinary order facts are otherwise usable, build an executable expense projection. For a mixed supermarket order, the real public mapping is exactly `category_id: "shopping"`; if that ID is unavailable in the public ledger contract, mark the projection non-executable rather than guessing or using a display name. If the image has no reliable transaction time, use the current session time with its timezone as `occurred_at`. `merchant` remains `null` when unknown. Therefore a missing merchant or image timestamp alone is not a reason to suppress the expense projection. Mark it non-executable only when the paid amount is missing/conflicting, `shopping` is unavailable, or another stated execution requirement is genuinely unresolved.
+
+## v2.1 business-to-adapter rules
+
+This section controls if an earlier descriptive passage conflicts with it.
+
+### Expense
+
+`facts.products` is the canonical provenance-rich fact set. It keeps fact wrappers, confidence, calculated status, evidence, and router-only business fields intact. The expense adapter is a one-way boundary from those canonical facts to `expense_projection.line_items`; it never changes `facts.products`, `diet_projection.business_products`, or the business digest.
+
+Create one expense, never one expense per product. `line_items` contains every ledger-forwardable visible purchased product as a ledger-public scalar row, not as a copy of the fact wrappers. Its required fields are nonblank `full_name`, finite positive `quantity`, and `field_metadata`; optional public fields are `normalized_name`, `specification`, `quantity_unit`, the four `{value, unit}` positive measurements, the four non-negative yuan amounts with at most cent precision, `production_date`, and `line_status`. Omit optional fields whose source fact is null or unknown. Map `purchase_quantity.value` to `quantity` and `line_paid_amount.value` to `paid_amount`. Never expose `purchase_quantity`, `line_paid_amount`, `item_type`, `visibility_status`, wrapper `currency`, confidence, calculated, or evidence as top-level line-item fields.
+
+For every emitted public field other than `field_metadata`, create exactly one deterministic metadata entry using the corresponding source wrapper and its first applicable evidence record: preserve the public field name in `field`, evidence source in `source`, wrapper confidence and calculated status, and evidence location when present. Metadata source is one of `visible_label`, `user_text`, `calculated`, `reference_database`, or `visual_estimate`; attachment context is forbidden. `field_metadata` has 1 to 100 strict entries and its fields exactly cover the emitted public fields.
+
+The finalized ledger-public projection is forwarded intact to `expense_entry.create`; raw/wrapper facts are not forwarded. `note` is generated independently as a concise display list; for many products it may name the first items plus `其他 N 种商品略`, but note truncation never removes or truncates structured `line_items`. Adapter-only repairs do not change the business digest or require another user confirmation.
+
+Refund and short-weight facts remain in order/product facts and their available ledger-public line-item fields. Do not create a refund income, negative expense, or second write, and do not net final paid unless the image explicitly establishes that result. Forward a present, nonempty finalized ledger-public `line_items` projection to personal-expense-ledger v0.3. If the installed ledger does not advertise support, fail that domain closed rather than silently dropping detail.
+
+### Diet/pantry
+
+`business_products` preserves source business facts and display semantics. `adapter_payload` contains deterministic technical normalization. `items` is the final strict public `diet_pantry.add` payload. Only clearly food + purchased + received rows enter `items`; hidden rows never do.
+
+Preserve the original display fact, such as `约 2.1 kg × 1粒`, in business facts even if the adapter uses `2100 g` or `piece`. Do not invent a container such as `袋` or `盒`: the display unit remains part of the business digest. Deterministic conversion is adapter-only: kg→g and L→ml use exact conversion without changing the digest. Unknown expiry adapts to the installed public schema; use its documented null or omission form and never invent a date.
+
+### Visible completeness
+
+Seven visible + two hidden yields at least 9/visible 7/hidden 2 in the user summary and only seven product rows downstream. Visible order detail remains in structured expense `line_items`; note summary/truncation never deletes line items. Refund facts remain but create no refund write.

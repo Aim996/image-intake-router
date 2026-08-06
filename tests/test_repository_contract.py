@@ -56,8 +56,10 @@ class RepositoryContractTests(unittest.TestCase):
             return dict(entries)
 
         required_commands = [
+            "python -m pip install --requirement requirements-test.txt",
             "tests.test_repository_contract",
             "image-intake-router/tests/test_static_contract.py",
+            "image-intake-router/tests/test_schema_fixtures.py",
             "tests.test_release_pipeline",
             "scripts.build_release",
             "scripts.verify_release",
@@ -102,6 +104,47 @@ class RepositoryContractTests(unittest.TestCase):
 
         verify_steps = steps(verify)
         publish_steps = steps(publish)
+        ci_steps = steps(ci)
+        fixture_command = "python image-intake-router/tests/test_schema_fixtures.py -v"
+        dependency_command = "python -m pip install --requirement requirements-test.txt"
+        for workflow_name, workflow_steps in [("CI", ci_steps), ("release", verify_steps)]:
+            headers = [header for header, _ in workflow_steps]
+            install_body = named_step(workflow_steps, "Install pinned test dependencies")
+            self.assertEqual(install_body.count(dependency_command), 1, workflow_name)
+            fixture_body = named_step(workflow_steps, "Validate v2.1 fixtures against schema")
+            self.assertEqual(fixture_body.count(fixture_command), 1, workflow_name)
+            install_position = headers.index("name: Install pinned test dependencies")
+            test_positions = [
+                index
+                for index, (_, body) in enumerate(workflow_steps)
+                if any(
+                    command in body
+                    for command in [
+                        "tests.test_repository_contract",
+                        "image-intake-router/tests/test_static_contract.py",
+                        "image-intake-router/tests/test_schema_fixtures.py",
+                        "tests.test_release_pipeline",
+                    ]
+                )
+            ]
+            self.assertGreater(len(test_positions), 0, workflow_name)
+            self.assertLess(install_position, min(test_positions), workflow_name)
+            self.assertLess(
+                install_position,
+                headers.index("name: Validate v2.1 fixtures against schema"),
+                workflow_name,
+            )
+            build_positions = [
+                index
+                for index, (_, body) in enumerate(workflow_steps)
+                if "scripts.build_release" in body
+            ]
+            self.assertEqual(len(build_positions), 1, workflow_name)
+            self.assertLess(
+                headers.index("name: Validate v2.1 fixtures against schema"),
+                build_positions[0],
+                workflow_name,
+            )
         self.assertEqual(
             [header for header, _ in publish_steps],
             ["name: Download verified release artifact", "name: Create GitHub Release"],
@@ -160,22 +203,56 @@ class RepositoryContractTests(unittest.TestCase):
         required = [
             "VERSION", "LICENSE", "CHANGELOG.md", "RELEASE_NOTES.md",
             "docs/INSTALL.md", "docs/UPGRADING.md", "docs/AI-PROMPTS.md",
+            "requirements-test.txt",
         ]
         self.assertEqual([name for name in required if not (ROOT / name).is_file()], [])
 
+    def test_test_dependencies_are_exactly_pinned(self) -> None:
+        self.assertEqual(
+            self.read("requirements-test.txt").splitlines(),
+            [
+                "attrs==26.1.0",
+                "jsonschema==4.26.0",
+                "jsonschema-specifications==2025.9.1",
+                "referencing==0.37.0",
+                "rpds-py==2026.6.3",
+                "typing_extensions==4.16.0",
+            ],
+        )
+
     def test_version_is_consistent(self) -> None:
-        self.assertEqual(self.read("VERSION"), "2.0.1\n")
+        self.assertEqual(self.read("VERSION"), "2.1.0\n")
         for path in ["README.md", "项目说明.md", "CHANGELOG.md", "RELEASE_NOTES.md"]:
-            self.assertIn("2.0.0", self.read(path), path)
-        self.assertIn("version: 2.0.1", self.read("image-intake-router/SKILL.md"))
+            self.assertIn("2.1.0", self.read(path), path)
+        self.assertIn("version: 2.1.0", self.read("image-intake-router/SKILL.md"))
+
+    def test_v2_1_docs_preserve_v2_0_1_rollback_and_media_safety_contract(self) -> None:
+        combined = "\n".join(
+            self.read(path)
+            for path in [
+                "README.md", "项目说明.md", "后续迭代计划.md", "约束文档.md",
+                "CHANGELOG.md", "RELEASE_NOTES.md", "docs/INSTALL.md",
+                "docs/UPGRADING.md", "docs/AI-PROMPTS.md",
+            ]
+        )
+        for phrase in [
+            "2.1.0", "2.0.1", "image-intake-router.v2.1",
+            "https://github.com/openclaw/openclaw/blob/main/docs/nodes/media-understanding.md",
+            "https://docs.openclaw.ai/tools/media-overview",
+            "tools.media.image.attachments.mode: \"all\"", "maxAttachments",
+            "真实视觉", "失败关闭", "一次业务确认", "不猜测", "原图",
+        ]:
+            self.assertIn(phrase, combined, phrase)
+
+        for path in ["项目说明.md", "后续迭代计划.md", "约束文档.md"]:
+            self.assertTrue((ROOT / path).is_file(), path)
 
     def test_install_docs_name_exact_assets_platforms_and_layout(self) -> None:
         readme = self.read("README.md")
         install = self.read("docs/INSTALL.md")
         for phrase in [
-            "https://github.com/Aim996/image-intake-router/releases/tag/v2.0.1",
-            "image-intake-router-2.0.1.tgz",
-            "image-intake-router-2.0.1.tgz.sha256",
+            "image-intake-router-2.1.0.tgz",
+            "image-intake-router-2.1.0.tgz.sha256",
         ]:
             self.assertIn(phrase, readme + install)
         for phrase in [
@@ -184,7 +261,7 @@ class RepositoryContractTests(unittest.TestCase):
             "NAS",
             "Get-FileHash",
             "sha256sum -c",
-            "image-intake-router-2.0.1/image-intake-router/",
+            "image-intake-router-2.1.0/image-intake-router/",
             "<OPENCLAW_SKILLS_DIR>",
         ]:
             self.assertIn(phrase, install)
@@ -192,10 +269,10 @@ class RepositoryContractTests(unittest.TestCase):
 
     def test_docs_cover_required_operations(self) -> None:
         expected = {
-            "README.md": ["GitHub Release", "数据保存位置", "回滚", "MIT"],
-            "docs/INSTALL.md": ["SHA-256", "OpenClaw", "真实验收", "food-image-intake"],
-            "docs/UPGRADING.md": ["更新前", "固定版本", "回滚", "未修改数据库"],
-            "docs/AI-PROMPTS.md": ["全新安装提示词", "安全更新提示词", "安装验收提示词"],
+            "README.md": ["Data boundary", "rollback", "MIT"],
+            "docs/INSTALL.md": ["SHA-256", "OpenClaw", "业务级 UAT", "food-image-intake"],
+            "docs/UPGRADING.md": ["更新", "2.1.0", "回滚", "数据库"],
+            "docs/AI-PROMPTS.md": ["全新安装提示词", "安全更新提示词", "UAT 提示词"],
         }
         for path, phrases in expected.items():
             text = self.read(path)
@@ -225,6 +302,34 @@ class RepositoryContractTests(unittest.TestCase):
         ci = self.read(".github/workflows/ci.yml")
         release = self.read(".github/workflows/release.yml")
         self._assert_release_workflow_contract(ci, release)
+
+    def test_release_contract_rejects_fixture_gate_after_archive_build(self) -> None:
+        ci = self.read(".github/workflows/ci.yml")
+        release = self.read(".github/workflows/release.yml")
+        fixture_step = (
+            "      - name: Validate v2.1 fixtures against schema\n"
+            "        run: python image-intake-router/tests/test_schema_fixtures.py -v\n"
+        )
+        self.assertEqual(release.count(fixture_step), 1)
+        mutated = release.replace(fixture_step, "", 1).replace(
+            "      - name: Upload verified release artifact\n",
+            fixture_step + "      - name: Upload verified release artifact\n",
+            1,
+        )
+        with self.assertRaises(AssertionError):
+            self._assert_release_workflow_contract(ci, mutated)
+
+    def test_release_contract_rejects_missing_fixture_dependency_install(self) -> None:
+        ci = self.read(".github/workflows/ci.yml")
+        release = self.read(".github/workflows/release.yml")
+        release = re.sub(
+            r"(?ms)^      - name: Install pinned test dependencies\n.*?(?=^      - )",
+            "",
+            release,
+            count=1,
+        )
+        with self.assertRaises(AssertionError):
+            self._assert_release_workflow_contract(ci, release)
 
     def test_release_contract_rejects_action_sha_comment_decoys(self) -> None:
         ci = self.read(".github/workflows/ci.yml")

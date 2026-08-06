@@ -27,6 +27,7 @@ RELEASE_MEMBER_NAMES = (
     "image-intake-router/references/output-contract.md",
     "image-intake-router/references/projection-contracts.md",
     "image-intake-router/references/recognition-rules.md",
+    "image-intake-router/references/vision-runtime.md",
     "image-intake-router/templates/image-intake-router.schema.json",
 )
 
@@ -94,7 +95,7 @@ def _write_single_member_archive(
 
 class ReleaseBuildTests(unittest.TestCase):
     def test_read_version_is_exact(self) -> None:
-        self.assertEqual(read_version(ROOT), "2.0.1")
+        self.assertEqual(read_version(ROOT), "2.1.0")
 
     def test_runtime_allowlist_excludes_source_only_files(self) -> None:
         names = {path.as_posix() for path in runtime_members(ROOT)}
@@ -114,6 +115,7 @@ class ReleaseBuildTests(unittest.TestCase):
                 "image-intake-router/references/output-contract.md",
                 "image-intake-router/references/projection-contracts.md",
                 "image-intake-router/references/recognition-rules.md",
+                "image-intake-router/references/vision-runtime.md",
             }.issubset(names)
         )
 
@@ -142,7 +144,7 @@ class ReleaseBuildTests(unittest.TestCase):
     def test_build_has_fixed_name_root_and_checksum(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             archive, checksum = build_release(ROOT, Path(directory))
-            self.assertEqual(archive.name, "image-intake-router-2.0.1.tgz")
+            self.assertEqual(archive.name, "image-intake-router-2.1.0.tgz")
             self.assertEqual(checksum.name, archive.name + ".sha256")
             first_archive_bytes = archive.read_bytes()
             second_archive, second_checksum = build_release(ROOT, Path(directory))
@@ -154,11 +156,11 @@ class ReleaseBuildTests(unittest.TestCase):
                 members = tar.getmembers()
                 payloads = [tar.extractfile(member).read() for member in members]
             names = [member.name for member in members]
-            prefix = "image-intake-router-2.0.1"
+            prefix = "image-intake-router-2.1.0"
             expected_names = [f"{prefix}/{path.as_posix()}" for path in runtime_members(ROOT)]
             self.assertEqual(names, expected_names)
             self.assertEqual(names, sorted(names))
-            self.assertEqual(len(names), 15)
+            self.assertEqual(len(names), 16)
             self.assertEqual(
                 {name for name in names if "/references/" in name},
                 {
@@ -168,9 +170,11 @@ class ReleaseBuildTests(unittest.TestCase):
                     f"{prefix}/image-intake-router/references/output-contract.md",
                     f"{prefix}/image-intake-router/references/projection-contracts.md",
                     f"{prefix}/image-intake-router/references/recognition-rules.md",
+                    f"{prefix}/image-intake-router/references/vision-runtime.md",
                 },
             )
             self.assertNotIn(f"{prefix}/image-intake-router/tests/test_static_contract.py", names)
+            self.assertNotIn(f"{prefix}/requirements-test.txt", names)
             self.assertFalse(any(name.startswith(f"{prefix}/scripts/") for name in names))
             self.assertFalse(any(name.startswith(f"{prefix}/.github/") for name in names))
             for member in members:
@@ -282,7 +286,7 @@ class ReleaseBuildTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as output, tempfile.TemporaryDirectory() as install:
             archive, checksum = build_release(ROOT, Path(output))
             report = verify_release(archive, checksum, Path(install))
-            self.assertEqual(report.version, "2.0.1")
+            self.assertEqual(report.version, "2.1.0")
             self.assertTrue((report.installed_skill / "SKILL.md").is_file())
             self.assertTrue(
                 (report.installed_skill / "templates/image-intake-router.schema.json").is_file()

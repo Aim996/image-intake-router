@@ -18,6 +18,7 @@ REFERENCE_FILES = (
     "output-contract.md",
     "projection-contracts.md",
     "recognition-rules.md",
+    "vision-runtime.md",
 )
 
 

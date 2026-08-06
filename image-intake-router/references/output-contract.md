@@ -1,67 +1,29 @@
-# 输出契约
+# Output contract
 
-每个等待确认的最近一次完整预览必须按以下顺序输出，先展示双预览，再展示确认提示。预览阶段不调用业务写入工具。
+## Default business output
 
-💰 即将记入随手账：
+The default preview and receipt are one or two business sentences. Before confirmation, state the recognised paid amount/category meaning, visible and hidden product/completeness summary, and what executable scopes will run after confirmation. If only one domain is executable, say the other will not run and why without blocking the executable domain. Full details only on request, omission questions, or diagnostics.
 
-仅展示存在的投影字段。若费用域有可执行投影，展示其可见摘要；若费用域无可执行投影，仍必须显示明确的不执行原因（例如“未识别到可信实付金额，本次不执行记账”），且不调用该域写工具。
+Approved concise preview example (an example, not a mandatory fixed skeleton):
 
-🥗 即将交给食序管家入库：
+> 识别到本单实付 ¥65.48，共至少 9 种商品；图片完整展示了 7 种，另外 2 种未展开。准备记账 ¥65.48，并将 7 种可见食品交给食序管家，是否确认？
 
-仅展示存在的投影字段。若饮食域有可执行投影，展示其可见摘要；若饮食域无可执行投影，仍必须显示明确的不执行原因，且不调用该域写工具。
+Approved concise receipt example (also an example, not a mandatory fixed skeleton):
 
-是否确认执行？
-可以回复：确认、只记账、只入库，或者直接说明修改内容。
+> 已记账 ¥65.48，完整保存了 7 种可见商品的名称、重量、数量和价格；食序管家成功入库 6 种，1 种因数量不明确未提交。
 
-用户提出问题时，回答问题或澄清预览，但不把该消息当作确认；用户说明修改内容时，生成新的完整双预览修订版，而非执行旧预览。
-## Structured preview rendering
+After confirmation, state the completed business result and any safe omission reason. A failed or not-executed `recognition_run` produces no business preview or confirmation prompt, no business projections, no adapter execution, and no business write; give a short failure explanation and ask for real visual capability or a re-upload instead. A whole attachment that failed or was skipped in a mixed batch cannot be presented as a partial preview.
 
-Natural-language previews may describe a value as unknown or explain that the
-current zoned session time will be selected at preview creation. If the reply
-also shows a JSON object representing the router preview, that object is a
-real structured representation and must validate against
-`templates/image-intake-router.schema.json`; do not show schema-shaped
-pseudocode as JSON.
+## What remains visible
 
-In particular, every `evidenceRecord` has exactly the declared fields:
-required `source` and `value`, with optional `location` and `reason`. Do not
-substitute an undeclared `text` field. An `occurred_at` included in JSON must
-be the actual generated ISO 8601 timestamp with a timezone; a placeholder such
-as `<current-session-time-with-+08:00>` is not valid JSON contract data. If an
-actual legal value is not available for display, omit the structured JSON and
-give the timing explanation in natural language instead.
+Visible order detail remains in structured expense `line_items`; a note summary never deletes or truncates those rows. Refund facts remain visible as facts but do not create a refund write. Do not claim an unsubmitted item was written. A partial order preview says that only visible rows were forwarded and keeps the completeness warning.
 
-For a complete diet preview, enumerate every recognised non-food item and
-every recognised fee/service as a distinct `excluded_items` entry. In
-particular, a delivery fee remains an expense auxiliary amount and must also
-appear as an excluded diet item; do not silently omit it merely because it is
-not a purchasable product.
+## Default redaction
 
-The awaiting-confirmation user-visible labels are exact contract text, not
-styling suggestions. Render exactly `💰 即将记入随手账：` followed by
-`🥗 即将交给食序管家入库：`, and end with these exact two lines:
+Default output must not show internal evidence enums such as `visible_label` or `user_text`, `attachment_context`, category ID `shopping`, an ISO timestamp, `expires_at`, technical `piece`, preview revision, operation/call IDs, adapter versions, or internal execution-state names. It also must not show internal handles, stable IDs, raw payload ordering, or strict-normalization details.
 
-```text
-是否确认执行？
-可以回复：确认、只记账、只入库，或者直接说明修改内容。
-```
+Details may expose only the minimum useful field/evidence/confidence/adapter/error explanation. Even diagnostics must not expose credentials, raw images, paths, base64, full OCR, payment accounts, or sensitive downstream identifiers.
 
-For every recognised product row and every recognised fee/service, show one
-and only one routing disposition: a pantry candidate, an excluded item, or an
-uncertain item. This visibility rule applies even when the same fee also
-appears as an expense auxiliary amount.
+## Confirmation language
 
-For a described-image rules exercise whose expense projection is executable,
-the human-visible expense preview must show the real public category mapping
-including `shopping`, the actual generated ISO 8601 `occurred_at` with
-timezone, and that merchant is not provided. The human-visible diet preview
-must separately enumerate every suggested, excluded, and uncertain item. A
-JSON router preview is optional; if shown, it must validate against the strict
-template above, use `merchant: null` for an unknown merchant, and use an
-actual zoned `occurred_at`, never a city label or placeholder. This does not
-permit raw image data, full OCR, credentials, or internal identifiers.
-
-The expense note lists recognised purchased product names only. Do not append
-delivery fees, service fees, discounts, refunds, or other auxiliary amounts to
-that note; list those separately as their own visible auxiliary facts and diet
-exclusions.
+Ask for confirmation only after presenting the current business digest. Map later replies exactly: `确认`/`可以`/`就这样` => all executable scopes; `只记账` => expense only; `只入库` => diet only. A question is not confirmation. A changed digest produces a new concise preview and requires a new confirmation; an adapter-only correction stays under its original confirmation according to the recovery contract.

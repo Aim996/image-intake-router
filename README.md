@@ -1,58 +1,38 @@
 # image-intake-router
 
-## 主要功能
+`image-intake-router` is a local OpenClaw Skill for payment screenshots, receipts, order pages, nutrition labels, food packages, grocery screenshots, and meal photos. Version **2.1.0** uses a real pixel/media recognition run once per attachment batch, builds unified detailed facts, then creates an expense projection and a pantry projection without reading the images again.
 
-`image-intake-router` 为支付截图、小票、订单页、营养标签、食品包装、买菜截图和餐食照片提供统一入口。同一批图片只进行一次视觉识别，生成规范化事实后同时产出随手账与食序管家的预览；只有用户确认后才允许下游写入。
+## Current version and safe rollback
 
-## 当前稳定版本
+The current product version is **2.1.0** and its protocol is `image-intake-router.v2.1`. Install the exact assets from the 2.1.0 release when it is published: `image-intake-router-2.1.0.tgz` and `image-intake-router-2.1.0.tgz.sha256`.
 
-当前稳定版本为 **2.0.1**。请从 [GitHub Release v2.0.1](https://github.com/Aim996/image-intake-router/releases/tag/v2.0.1) 下载固定版本资产。
+Keep the immutable [v2.0.1 release](https://github.com/Aim996/image-intake-router/releases/tag/v2.0.1), its `image-intake-router-2.0.1.tgz` and checksum, and the prior OpenClaw configuration as a rollback target. Do not overwrite an existing Skill directory or a downstream database while updating.
 
-2.0.0 保留为历史发布记录；安装与升级应使用当前固定版本 2.0.1。
+## What changes for users
 
-## 系统要求
+- A batch has one true visual recognition run; attachment filenames and descriptions do not create facts.
+- Unified facts retain product names, specifications, quantities, paid amounts, refunds, merchant, time, order status, source, confidence, calculations, and image completeness.
+- The expense adapter receives scalar line items with name, specification, quantity, paid amount, and refund detail. The pantry adapter consumes the same facts without a second image read.
+- The initial image turn makes zero business writes and gives one concise preview. A later business confirmation is required once; adapter-only technical repair uses the same digest and does not ask again or duplicate writes.
+- A failed or missing visual result for any attachment fails closed: no preview and no business write. Folded or incomplete screenshots state visible and hidden counts without guessing hidden products.
 
-- 可下载 GitHub Release 资产的环境。
-- 已配置的 OpenClaw 实例。
-- 可单独安装 Skill 的目录，以及用于保存已验证旧版本的空间。
+## Install and validate
 
-## 最简单的安装方法
+Follow [the installation guide](docs/INSTALL.md) to verify SHA-256, configure real image media, install only the nested Skill directory, and perform the business-level UAT. Follow [the upgrading guide](docs/UPGRADING.md) for side-by-side installation and rollback.
 
-1. 从 [GitHub Release v2.0.1](https://github.com/Aim996/image-intake-router/releases/tag/v2.0.1) 下载 `image-intake-router-2.0.1.tgz` 与 `image-intake-router-2.0.1.tgz.sha256`。
-2. 核验 SHA-256 后，将发布包解压到新的 Skill 目录。
-3. 在 OpenClaw 中启用 `image-intake-router`，并停用 `food-image-intake`。
-4. 重载配置并按照 [安装指南](docs/INSTALL.md) 做真实验收。
+For OpenClaw media behavior, see the official [media-understanding guide](https://github.com/openclaw/openclaw/blob/main/docs/nodes/media-understanding.md) and [media overview](https://docs.openclaw.ai/tools/media-overview).
 
-## 使用示例
+## Data boundary
 
-上传一张订单截图后，Skill 会先返回随手账和食序管家的预览。回复“确认”可执行全部可执行项；回复“只记账”或“只入库”可缩小范围。提问或修改内容不会构成确认。
+The router does not store original images, paths, base64, full OCR, credentials, or local business databases. It routes confirmed public facts to downstream Skills; those Skills own their own local data. Unsupported business cases include income, balances, transfers, loans, investments, assets, guessed hidden products, and writing anything from a visual run that is absent or incomplete.
 
-## 更新方法
-
-更新前备份当前目录与 OpenClaw 配置，下载并核验固定版本，再在新的目录安装。完整检查、健康验证与回滚步骤见 [更新与回滚指南](docs/UPGRADING.md)。
-
-## 数据保存位置与数据安全
-
-本仓库不保存原图、完整 OCR、支付账户、凭据或本地业务数据库。实际数据由下游系统在用户确认后处理；本版本不迁移或修改数据库结构。
-
-## 备份与恢复
-
-升级前保留当前已验证版本的完整 Skill 目录与 OpenClaw 配置。若新版本不符合预期，停用它并恢复该目录和配置，然后重载并进行健康检查。
-
-## 常见问题
-
-- **能否同时启用旧版？** 不能。`food-image-intake` 与 `image-intake-router` 同时激活会导致重复识别风险。
-- **SHA-256 不一致怎么办？** 停止安装，重新从 GitHub Release 获取发布资产。
-- **如何回滚？** 使用 [更新与回滚指南](docs/UPGRADING.md) 恢复已验证的固定版本和配置。
-
-## 开发者验证
+## Development checks
 
 ```powershell
-python -m unittest tests.test_repository_contract -v
-python image-intake-router\tests\test_static_contract.py -v
-python -m json.tool image-intake-router\templates\image-intake-router.schema.json
+python -m unittest discover -s tests -p 'test_*.py' -v
+python -m unittest discover -s image-intake-router/tests -p 'test_*.py' -v
 ```
 
 ## License
 
-本项目采用 [MIT License](LICENSE)。
+[MIT](LICENSE)
