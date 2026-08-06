@@ -111,7 +111,7 @@ class RepositoryContractTests(unittest.TestCase):
             headers = [header for header, _ in workflow_steps]
             install_body = named_step(workflow_steps, "Install pinned test dependencies")
             self.assertEqual(install_body.count(dependency_command), 1, workflow_name)
-            fixture_body = named_step(workflow_steps, "Validate v2.1 fixtures against schema")
+            fixture_body = named_step(workflow_steps, "Validate v3 fixtures against schema")
             self.assertEqual(fixture_body.count(fixture_command), 1, workflow_name)
             install_position = headers.index("name: Install pinned test dependencies")
             test_positions = [
@@ -131,7 +131,7 @@ class RepositoryContractTests(unittest.TestCase):
             self.assertLess(install_position, min(test_positions), workflow_name)
             self.assertLess(
                 install_position,
-                headers.index("name: Validate v2.1 fixtures against schema"),
+                headers.index("name: Validate v3 fixtures against schema"),
                 workflow_name,
             )
             build_positions = [
@@ -141,7 +141,7 @@ class RepositoryContractTests(unittest.TestCase):
             ]
             self.assertEqual(len(build_positions), 1, workflow_name)
             self.assertLess(
-                headers.index("name: Validate v2.1 fixtures against schema"),
+                headers.index("name: Validate v3 fixtures against schema"),
                 build_positions[0],
                 workflow_name,
             )
@@ -221,12 +221,12 @@ class RepositoryContractTests(unittest.TestCase):
         )
 
     def test_version_is_consistent(self) -> None:
-        self.assertEqual(self.read("VERSION"), "2.1.0\n")
+        self.assertEqual(self.read("VERSION"), "3.0.0\n")
         for path in ["README.md", "项目说明.md", "CHANGELOG.md", "RELEASE_NOTES.md"]:
-            self.assertIn("2.1.0", self.read(path), path)
-        self.assertIn("version: 2.1.0", self.read("image-intake-router/SKILL.md"))
+            self.assertIn("3.0.0", self.read(path), path)
+        self.assertIn("version: 3.0.0", self.read("image-intake-router/SKILL.md"))
 
-    def test_v2_1_docs_preserve_v2_0_1_rollback_and_media_safety_contract(self) -> None:
+    def test_v3_docs_preserve_v2_1_rollback_and_recognition_handoff_contract(self) -> None:
         combined = "\n".join(
             self.read(path)
             for path in [
@@ -236,11 +236,13 @@ class RepositoryContractTests(unittest.TestCase):
             ]
         )
         for phrase in [
-            "2.1.0", "2.0.1", "image-intake-router.v2.1",
-            "https://github.com/openclaw/openclaw/blob/main/docs/nodes/media-understanding.md",
-            "https://docs.openclaw.ai/tools/media-overview",
-            "tools.media.image.attachments.mode: \"all\"", "maxAttachments",
-            "真实视觉", "失败关闭", "一次业务确认", "不猜测", "原图",
+            "3.0.0", "2.1.0", "image-intake-router.v3",
+            "识图输出与确认规范",
+            "最多一次补充识读",
+            "【入账内容】",
+            "【入库内容】",
+            "OpenClaw",
+            "不修改下游项目",
         ]:
             self.assertIn(phrase, combined, phrase)
 
@@ -251,8 +253,8 @@ class RepositoryContractTests(unittest.TestCase):
         readme = self.read("README.md")
         install = self.read("docs/INSTALL.md")
         for phrase in [
-            "image-intake-router-2.1.0.tgz",
-            "image-intake-router-2.1.0.tgz.sha256",
+            "image-intake-router-3.0.0.tgz",
+            "image-intake-router-3.0.0.tgz.sha256",
         ]:
             self.assertIn(phrase, readme + install)
         for phrase in [
@@ -261,7 +263,7 @@ class RepositoryContractTests(unittest.TestCase):
             "NAS",
             "Get-FileHash",
             "sha256sum -c",
-            "image-intake-router-2.1.0/image-intake-router/",
+            "image-intake-router-3.0.0/image-intake-router/",
             "<OPENCLAW_SKILLS_DIR>",
         ]:
             self.assertIn(phrase, install)
@@ -271,7 +273,7 @@ class RepositoryContractTests(unittest.TestCase):
         expected = {
             "README.md": ["Data boundary", "rollback", "MIT"],
             "docs/INSTALL.md": ["SHA-256", "OpenClaw", "业务级 UAT", "food-image-intake"],
-            "docs/UPGRADING.md": ["更新", "2.1.0", "回滚", "数据库"],
+            "docs/UPGRADING.md": ["更新", "3.0.0", "回滚", "数据库"],
             "docs/AI-PROMPTS.md": ["全新安装提示词", "安全更新提示词", "UAT 提示词"],
         }
         for path, phrases in expected.items():
@@ -307,7 +309,7 @@ class RepositoryContractTests(unittest.TestCase):
         ci = self.read(".github/workflows/ci.yml")
         release = self.read(".github/workflows/release.yml")
         fixture_step = (
-            "      - name: Validate v2.1 fixtures against schema\n"
+            "      - name: Validate v3 fixtures against schema\n"
             "        run: python image-intake-router/tests/test_schema_fixtures.py -v\n"
         )
         self.assertEqual(release.count(fixture_step), 1)
