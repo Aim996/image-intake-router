@@ -14,7 +14,7 @@ Install the exact v3 assets `image-intake-router-3.0.0.tgz` and `image-intake-ro
 
 Keep the immutable [v2.1.0 release](https://github.com/Aim996/image-intake-router/releases/tag/v2.1.0), exact assets `image-intake-router-2.1.0.tgz` and `image-intake-router-2.1.0.tgz.sha256`, the verified old Skill directory, and the prior OpenClaw configuration as the rollback target. Follow [the upgrading guide](docs/UPGRADING.md) to restore them without touching downstream data. Old tags and assets must not be renamed or deleted.
 
-For the complete public behavior, see [识图输出与确认规范](识图输出与确认规范.md). For OpenClaw media behavior, see the official [media-understanding guide](https://github.com/openclaw/openclaw/blob/main/docs/nodes/media-understanding.md) and [media overview](https://docs.openclaw.ai/tools/media-overview).
+For the complete public behavior, see the version-pinned [识图输出与确认规范](https://github.com/Aim996/image-intake-router/blob/v3.0.0/%E8%AF%86%E5%9B%BE%E8%BE%93%E5%87%BA%E4%B8%8E%E7%A1%AE%E8%AE%A4%E8%A7%84%E8%8C%83.md). For OpenClaw media behavior, see the official [media-understanding guide](https://github.com/openclaw/openclaw/blob/main/docs/nodes/media-understanding.md) and [media overview](https://docs.openclaw.ai/tools/media-overview).
 
 ## Data boundary
 
