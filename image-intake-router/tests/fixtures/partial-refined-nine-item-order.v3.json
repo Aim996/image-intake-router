@@ -17,7 +17,7 @@
         "status": "partial",
         "completeness": "partial",
         "limitations": [
-          "two item kinds are collapsed"
+          "two hidden item kinds remain after successful targeted refinement"
         ]
       }
     ],

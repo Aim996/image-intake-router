@@ -483,9 +483,25 @@ class RouterV3FixtureSchemaTests(unittest.TestCase):
         self.assertIn("另有 2 种商品未展开", record["warnings"])
         self.assertEqual(record["preview_state"], "awaiting_confirmation")
         self.assertIsNone(record["handoff"])
+        partial_attachments = [
+            attachment
+            for attachment in run["attachments"]
+            if attachment["status"] == "partial"
+        ]
+        self.assertGreater(len(partial_attachments), 0)
+        for attachment in partial_attachments:
+            self.assertEqual(attachment["completeness"], "partial")
+            self.assertGreater(len(attachment["limitations"]), 0)
         self.assert_schema_valid(record)
         self.assert_runtime_attachment_invariants(record)
         self.assert_runtime_content_invariants(record)
+
+        missing_partial_witness = copy.deepcopy(record)
+        for attachment in missing_partial_witness["recognition_run"]["attachments"]:
+            attachment["status"] = "succeeded"
+            attachment["completeness"] = "complete"
+            attachment["limitations"] = []
+        self.assert_schema_invalid(missing_partial_witness)
 
     def test_inventory_view_preserves_count_and_nominal_measurement_separately(self) -> None:
         record = self.fixture("partial-nine-item-order.v3.json")

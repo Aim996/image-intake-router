@@ -261,7 +261,7 @@
           "if": {
             "properties": {
               "status": { "const": "partial" },
-              "refinement": { "properties": { "status": { "const": "not_needed" } }, "required": ["status"] }
+              "refinement": { "properties": { "status": { "enum": ["not_needed", "succeeded"] } }, "required": ["status"] }
             },
             "required": ["status", "refinement"]
           },
