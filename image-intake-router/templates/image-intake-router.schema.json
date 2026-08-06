@@ -1,87 +1,100 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://local.openclaw.invalid/schemas/image-intake-router.v2.json",
-  "title": "Image Intake Router v2",
+  "$id": "https://local.openclaw.invalid/schemas/image-intake-router.v3.json",
+  "title": "Image Intake Router v3",
   "type": "object",
   "additionalProperties": false,
   "required": [
     "schema_version",
+    "preview_id",
     "preview_state",
     "source",
+    "recognition_run",
+    "cleaned_text",
     "facts",
-    "expense_projection",
-    "diet_projection",
-    "quality",
-    "recognition_run"
+    "accounting_content",
+    "inventory_content",
+    "warnings",
+    "handoff"
   ],
   "properties": {
-    "schema_version": { "const": "image-intake-router.v2.1" },
-    "preview_state": { "enum": ["draft", "awaiting_confirmation", "executing", "consumed"] },
+    "schema_version": { "const": "image-intake-router.v3" },
+    "preview_id": { "type": "string", "minLength": 16, "maxLength": 128, "pattern": "^[A-Za-z0-9._:-]+$" },
+    "preview_state": { "enum": ["awaiting_confirmation", "handed_off", "not_actionable", "failed"] },
     "source": { "$ref": "#/$defs/source" },
     "recognition_run": { "$ref": "#/$defs/recognitionRun" },
+    "cleaned_text": { "type": ["string", "null"], "minLength": 1, "maxLength": 20000 },
     "facts": { "$ref": "#/$defs/facts" },
-    "expense_projection": {
-      "oneOf": [
-        { "$ref": "#/$defs/expenseProjection" },
-        { "type": "null" }
-      ]
-    },
-    "diet_projection": {
-      "oneOf": [
-        { "$ref": "#/$defs/dietProjection" },
-        { "type": "null" }
-      ]
-    },
-    "quality": { "$ref": "#/$defs/quality" }
+    "accounting_content": { "oneOf": [{ "$ref": "#/$defs/accountingContent" }, { "type": "null" }] },
+    "inventory_content": { "oneOf": [{ "$ref": "#/$defs/inventoryContent" }, { "type": "null" }] },
+    "warnings": { "type": "array", "items": { "type": "string", "minLength": 1, "maxLength": 500 }, "maxItems": 100 },
+    "handoff": { "oneOf": [{ "$ref": "#/$defs/handoff" }, { "type": "null" }] }
   },
   "allOf": [
     {
       "if": {
         "properties": {
-          "quality": {
-            "properties": {
-              "fact_set_status": { "const": "complete" }
-            }
-          }
-        }
+          "preview_state": { "const": "awaiting_confirmation" }
+        },
+        "required": ["preview_state"]
       },
       "then": {
         "properties": {
-          "facts": {
-            "properties": {
-              "unresolved_issues": { "maxItems": 0 }
-            }
-          },
-          "quality": {
-            "properties": {
-              "issues": { "maxItems": 0 }
-            }
-          }
-        }
+          "handoff": { "type": "null" }
+        },
+        "anyOf": [
+          { "properties": { "accounting_content": { "type": "object", "properties": { "executable": { "const": true } }, "required": ["executable"] } } },
+          { "properties": { "inventory_content": { "type": "object", "properties": { "executable": { "const": true } }, "required": ["executable"] } } }
+        ]
       }
     },
     {
       "if": {
         "properties": {
-          "recognition_run": {
-            "properties": {
-              "status": { "enum": ["failed", "not_executed"] }
-            },
-            "required": ["status"]
-          }
+          "preview_state": { "const": "handed_off" }
         },
+        "required": ["preview_state"]
+      },
+      "then": {
+        "properties": { "handoff": { "$ref": "#/$defs/handoff" } }
+      }
+    },
+    {
+      "if": { "properties": { "preview_state": { "const": "not_actionable" } }, "required": ["preview_state"] },
+      "then": {
+        "properties": {
+          "accounting_content": { "oneOf": [{ "type": "null" }, { "type": "object", "properties": { "executable": { "const": false } }, "required": ["executable"] }] },
+          "inventory_content": { "oneOf": [{ "type": "null" }, { "type": "object", "properties": { "executable": { "const": false } }, "required": ["executable"] }] },
+          "handoff": { "type": "null" }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "preview_state": { "const": "failed" } }, "required": ["preview_state"] },
+      "then": {
+        "properties": {
+          "recognition_run": { "properties": { "status": { "enum": ["failed", "not_executed"] } }, "required": ["status"] },
+          "cleaned_text": { "type": "null" },
+          "accounting_content": { "type": "null" },
+          "inventory_content": { "type": "null" },
+          "warnings": { "minItems": 1 },
+          "handoff": { "type": "null" }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": { "recognition_run": { "properties": { "status": { "enum": ["failed", "not_executed"] } }, "required": ["status"] } },
         "required": ["recognition_run"]
       },
       "then": {
         "properties": {
-          "preview_state": { "const": "draft" },
-          "expense_projection": { "type": "null" },
-          "diet_projection": { "type": "null" },
-          "quality": {
-            "properties": {
-              "fact_set_status": { "const": "unavailable" }
-            }
-          }
+          "preview_state": { "const": "failed" },
+          "cleaned_text": { "type": "null" },
+          "accounting_content": { "type": "null" },
+          "inventory_content": { "type": "null" },
+          "warnings": { "minItems": 1 },
+          "handoff": { "type": "null" }
         }
       }
     }
@@ -99,11 +112,13 @@
     "recognitionRun": {
       "type": "object",
       "additionalProperties": false,
-      "description": "Mandatory pre-projection runtime validation: attachment_count equals source.image_count and attachments.length; attachments contain exactly one record for each unique contiguous attachment_index from 0 through attachment_count - 1; processed_attachment_count equals the number of attachments whose status is not not_executed and must not exceed attachment_count. A succeeded run requires processed_attachment_count to equal attachment_count. Fail closed before any projection when any invariant is violated.",
-      "required": ["status", "method", "attachment_count", "processed_attachment_count", "attachments", "issues"],
+      "description": "Mandatory runtime validation: attachment_count equals source.image_count and attachments.length; attachments contain exactly one record for each unique contiguous attachment_index from 0 through attachment_count - 1; processed_attachment_count equals the number of attachments whose status is not not_executed and must not exceed attachment_count. A succeeded run requires processed_attachment_count to equal attachment_count. Fail closed before any preview or handoff when any invariant is violated.",
+      "required": ["status", "method", "pass_count", "refinement", "attachment_count", "processed_attachment_count", "attachments", "issues"],
       "properties": {
         "status": { "enum": ["succeeded", "partial", "failed", "not_executed"] },
         "method": { "enum": ["native_vision", "media_understanding"] },
+        "pass_count": { "type": "integer", "minimum": 0, "maximum": 2 },
+        "refinement": { "$ref": "#/$defs/refinementRun" },
         "attachment_count": { "type": "integer", "minimum": 1, "maximum": 100 },
         "processed_attachment_count": { "type": "integer", "minimum": 0, "maximum": 100, "description": "Derived from attachment records that entered visual capability (not not_executed). Runtime validation requires it to be no greater than attachment_count." },
         "attachments": { "type": "array", "items": { "$ref": "#/$defs/recognitionAttachment" }, "minItems": 1, "maxItems": 100, "uniqueItems": true },
@@ -127,9 +142,7 @@
             "properties": {
               "processed_attachment_count": { "minimum": 1 },
               "attachments": {
-                "items": { "properties": { "status": { "enum": ["succeeded", "partial"] } } },
-                "contains": { "properties": { "status": { "const": "partial" } }, "required": ["status"] },
-                "minContains": 1
+                "items": { "properties": { "status": { "enum": ["succeeded", "partial"] } } }
               }
             }
           }
@@ -161,13 +174,98 @@
           "then": {
             "properties": {
               "processed_attachment_count": { "const": 0 },
+              "pass_count": { "const": 0 },
+              "refinement": { "properties": { "status": { "const": "not_applicable" } }, "required": ["status"] },
               "attachments": {
                 "items": { "properties": { "status": { "const": "not_executed" }, "completeness": { "const": "unavailable" } } }
               }
             }
           }
+        },
+        {
+          "if": { "properties": { "status": { "const": "failed" } }, "required": ["status"] },
+          "then": {
+            "properties": {
+              "pass_count": { "enum": [0, 1] },
+              "refinement": { "properties": { "status": { "const": "not_applicable" } }, "required": ["status"] }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "refinement": { "properties": { "status": { "const": "not_applicable" } }, "required": ["status"] } }, "required": ["refinement"] },
+          "then": { "properties": { "status": { "enum": ["failed", "not_executed"] }, "pass_count": { "enum": [0, 1] } } }
+        },
+        {
+          "if": { "properties": { "refinement": { "properties": { "status": { "const": "not_needed" } }, "required": ["status"] } }, "required": ["refinement"] },
+          "then": {
+            "properties": {
+              "pass_count": { "const": 1 },
+              "refinement": {
+                "properties": {
+                  "reasons": { "maxItems": 0 },
+                  "targeted_fields": { "maxItems": 0 },
+                  "attachment_indexes": { "maxItems": 0 },
+                  "issues": { "maxItems": 0 }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "refinement": { "properties": { "status": { "enum": ["succeeded", "partial", "failed"] } }, "required": ["status"] } }, "required": ["refinement"] },
+          "then": {
+            "properties": {
+              "pass_count": { "const": 2 },
+              "refinement": {
+                "properties": {
+                  "reasons": { "minItems": 1 },
+                  "targeted_fields": { "minItems": 1 },
+                  "attachment_indexes": { "minItems": 1 },
+                  "issues": { "minItems": 1 }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "refinement": { "properties": { "status": { "const": "succeeded" } }, "required": ["status"] } }, "required": ["refinement"] },
+          "then": { "properties": { "status": { "const": "succeeded" } } }
+        },
+        {
+          "if": { "properties": { "refinement": { "properties": { "status": { "enum": ["partial", "failed"] } }, "required": ["status"] } }, "required": ["refinement"] },
+          "then": { "properties": { "status": { "const": "partial" } } }
         }
       ]
+    },
+    "refinementRun": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "reasons", "targeted_fields", "attachment_indexes", "issues"],
+      "properties": {
+        "status": { "enum": ["not_applicable", "not_needed", "succeeded", "partial", "failed"] },
+        "reasons": { "type": "array", "items": { "type": "string", "minLength": 1, "maxLength": 500 }, "maxItems": 20 },
+        "targeted_fields": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "merchant", "transaction_time", "order_status", "final_paid_amount", "refund_total",
+              "full_name", "normalized_name", "specification", "purchase_quantity", "quantity_unit",
+              "nominal_weight_or_volume", "actual_weight_or_volume", "billing_weight", "weight_variance",
+              "original_amount", "unit_price", "line_paid_amount", "refund_amount", "production_date",
+              "line_status", "item_type", "visibility_status", "visible_item_count"
+            ]
+          },
+          "maxItems": 24
+        },
+        "attachment_indexes": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "integer", "minimum": 0, "maximum": 99 },
+          "maxItems": 100
+        },
+        "issues": { "type": "array", "items": { "type": "string", "minLength": 1, "maxLength": 500 }, "maxItems": 20 }
+      }
     },
     "recognitionAttachment": {
       "type": "object",
@@ -282,41 +380,6 @@
         }
       ]
     },
-    "ledgerLineNameFact": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["value", "confidence", "calculated", "evidence"],
-      "properties": {
-        "value": { "type": "string", "minLength": 1, "maxLength": 1000 },
-        "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
-        "calculated": { "type": "boolean" },
-        "evidence": { "type": "array", "items": { "$ref": "#/$defs/evidenceRecord" }, "maxItems": 20 }
-      },
-      "allOf": [
-        {
-          "if": { "properties": { "value": { "type": "string" } } },
-          "then": { "properties": { "evidence": { "minItems": 1 } } }
-        }
-      ]
-    },
-    "ledgerLineQuantityFact": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["value", "unit", "confidence", "calculated", "evidence"],
-      "properties": {
-        "value": { "type": "number", "exclusiveMinimum": 0, "maximum": 9999999999.99 },
-        "unit": { "type": ["string", "null"], "maxLength": 40 },
-        "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
-        "calculated": { "type": "boolean" },
-        "evidence": { "type": "array", "items": { "$ref": "#/$defs/evidenceRecord" }, "maxItems": 20 }
-      },
-      "allOf": [
-        {
-          "if": { "properties": { "value": { "type": "number" } } },
-          "then": { "properties": { "evidence": { "minItems": 1 } } }
-        }
-      ]
-    },
     "dateFact": {
       "type": "object",
       "additionalProperties": false,
@@ -406,15 +469,6 @@
         "content_complete": { "$ref": "#/$defs/booleanFact" }
       }
     },
-    "auxiliaryAmount": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["kind", "amount"],
-      "properties": {
-        "kind": { "type": "string", "minLength": 1, "maxLength": 80 },
-        "amount": { "$ref": "#/$defs/amountFact" }
-      }
-    },
     "itemFact": {
       "type": "object",
       "additionalProperties": false,
@@ -480,63 +534,6 @@
         "visibility_status": { "$ref": "#/$defs/textFact" }
       }
     },
-    "fieldMetadata": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["field", "source", "confidence", "calculated"],
-      "properties": {
-        "field": {
-          "enum": [
-            "full_name", "normalized_name", "specification", "quantity", "quantity_unit",
-            "nominal_weight_or_volume", "actual_weight_or_volume", "billing_weight", "weight_variance",
-            "original_amount", "unit_price", "paid_amount", "refund_amount", "production_date", "line_status"
-          ]
-        },
-        "source": {
-          "enum": ["visible_label", "user_text", "calculated", "reference_database", "visual_estimate"]
-        },
-        "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
-        "calculated": { "type": "boolean" },
-        "location": { "type": "string", "minLength": 1, "maxLength": 240, "pattern": "\\S" }
-      }
-    },
-    "expenseMeasurement": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["value", "unit"],
-      "properties": {
-        "value": { "type": "number", "exclusiveMinimum": 0, "maximum": 1000000000 },
-        "unit": { "type": "string", "minLength": 1, "maxLength": 40, "pattern": "\\S" }
-      }
-    },
-    "expenseLineItem": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["full_name", "quantity", "field_metadata"],
-      "properties": {
-        "full_name": { "type": "string", "minLength": 1, "maxLength": 240, "pattern": "\\S" },
-        "normalized_name": { "type": "string", "minLength": 1, "maxLength": 240, "pattern": "\\S" },
-        "specification": { "type": "string", "minLength": 1, "maxLength": 240, "pattern": "\\S" },
-        "quantity": { "type": "number", "exclusiveMinimum": 0, "maximum": 1000000000 },
-        "quantity_unit": { "type": "string", "minLength": 1, "maxLength": 40, "pattern": "\\S" },
-        "nominal_weight_or_volume": { "$ref": "#/$defs/expenseMeasurement" },
-        "actual_weight_or_volume": { "$ref": "#/$defs/expenseMeasurement" },
-        "billing_weight": { "$ref": "#/$defs/expenseMeasurement" },
-        "weight_variance": { "$ref": "#/$defs/expenseMeasurement" },
-        "original_amount": { "type": "number", "minimum": 0, "maximum": 9999999999.99, "multipleOf": 0.01 },
-        "unit_price": { "type": "number", "minimum": 0, "maximum": 9999999999.99, "multipleOf": 0.01 },
-        "paid_amount": { "type": "number", "minimum": 0, "maximum": 9999999999.99, "multipleOf": 0.01 },
-        "refund_amount": { "type": "number", "minimum": 0, "maximum": 9999999999.99, "multipleOf": 0.01 },
-        "production_date": { "type": "string", "format": "date", "minLength": 10, "maxLength": 10 },
-        "line_status": { "type": "string", "minLength": 1, "maxLength": 240, "pattern": "\\S" },
-        "field_metadata": {
-          "type": "array",
-          "items": { "$ref": "#/$defs/fieldMetadata" },
-          "minItems": 1,
-          "maxItems": 100
-        }
-      }
-    },
     "facts": {
       "type": "object",
       "additionalProperties": false,
@@ -555,265 +552,110 @@
         }
       }
     },
-    "expenseProjection": {
+    "measurement": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "executable",
-        "amount",
-        "category_id",
-        "occurred_at",
-        "source_kind",
-        "merchant",
-        "note",
-        "issues"
-      ],
+      "required": ["value", "unit"],
+      "properties": {
+        "value": { "type": "number", "exclusiveMinimum": 0 },
+        "unit": { "type": "string", "minLength": 1, "maxLength": 40, "pattern": "\\S" }
+      }
+    },
+    "accountingItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["product_index", "full_name"],
+      "properties": {
+        "product_index": { "type": "integer", "minimum": 0, "maximum": 99 },
+        "full_name": { "type": "string", "minLength": 1, "maxLength": 1000, "pattern": "\\S" },
+        "specification": { "type": ["string", "null"], "minLength": 1, "maxLength": 1000, "pattern": "\\S" },
+        "quantity": { "type": ["number", "null"], "exclusiveMinimum": 0, "maximum": 9999999999.99 },
+        "quantity_unit": { "type": ["string", "null"], "minLength": 1, "maxLength": 40, "pattern": "\\S" },
+        "nominal_weight_or_volume": { "oneOf": [{ "$ref": "#/$defs/measurement" }, { "type": "null" }] },
+        "actual_weight_or_volume": { "oneOf": [{ "$ref": "#/$defs/measurement" }, { "type": "null" }] },
+        "weight_variance": { "oneOf": [{ "$ref": "#/$defs/measurement" }, { "type": "null" }] },
+        "line_paid_amount": { "type": ["number", "null"], "minimum": 0, "maximum": 9999999999.99 },
+        "refund_amount": { "type": ["number", "null"], "minimum": 0, "maximum": 9999999999.99 }
+      }
+    },
+    "accountingContent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["executable", "merchant", "transaction_time", "final_paid_amount", "items", "issues"],
       "properties": {
         "executable": { "type": "boolean" },
-        "amount": { "type": ["number", "null"], "exclusiveMinimum": 0, "maximum": 9999999999.99 },
-        "category_id": { "type": ["string", "null"], "minLength": 1, "maxLength": 80 },
-        "occurred_at": {
-          "type": ["string", "null"],
-          "minLength": 20,
-          "maxLength": 40,
-          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(?:\\.[0-9]+)?(?:Z|[+-][0-9]{2}:[0-9]{2})$"
-        },
-        "source_kind": { "const": "image" },
-        "merchant": { "type": ["string", "null"], "minLength": 1, "maxLength": 120 },
-        "note": { "type": ["string", "null"], "minLength": 1, "maxLength": 1000 },
-        "issues": {
+        "merchant": { "type": ["string", "null"], "minLength": 1, "maxLength": 1000, "pattern": "\\S" },
+        "transaction_time": { "type": ["string", "null"], "minLength": 1, "maxLength": 1000, "pattern": "\\S" },
+        "final_paid_amount": { "type": ["number", "null"], "minimum": 0, "maximum": 9999999999.99 },
+        "items": {
           "type": "array",
-          "items": { "type": "string", "minLength": 1, "maxLength": 500 },
-          "maxItems": 50
+          "description": "Runtime validation requires each product_index to be unique within this array.",
+          "items": { "$ref": "#/$defs/accountingItem" },
+          "maxItems": 100,
+          "uniqueItems": true
         },
-        "line_items": { "type": "array", "items": { "$ref": "#/$defs/expenseLineItem" }, "minItems": 1, "maxItems": 100 },
-        "detail_completeness": { "enum": ["complete", "partial", "unavailable"] },
-        "omitted_item_count": { "type": "integer", "minimum": 0, "maximum": 1000000 }
+        "issues": { "type": "array", "items": { "type": "string", "minLength": 1, "maxLength": 500 }, "maxItems": 100 }
       },
       "allOf": [
         {
-          "if": { "properties": { "executable": { "const": false } } },
-          "then": {
-            "properties": {
-              "amount": { "type": "null" },
-              "category_id": { "type": "null" },
-              "occurred_at": { "type": "null" },
-              "merchant": { "type": "null" },
-              "note": { "type": "null" },
-              "issues": { "minItems": 1 }
-            }
-          }
-        },
-        {
-          "if": { "properties": { "executable": { "const": true } } },
-          "then": {
-            "properties": {
-              "amount": { "type": "number", "exclusiveMinimum": 0, "maximum": 9999999999.99 },
-              "category_id": { "type": "string", "minLength": 1, "maxLength": 80 },
-              "occurred_at": {
-                "type": "string",
-                "minLength": 20,
-                "maxLength": 40,
-                "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(?:\\.[0-9]+)?(?:Z|[+-][0-9]{2}:[0-9]{2})$"
-              }
-            }
-          }
+          "if": { "properties": { "executable": { "const": true } }, "required": ["executable"] },
+          "then": { "properties": { "final_paid_amount": { "type": "number", "exclusiveMinimum": 0, "maximum": 9999999999.99 } } }
         }
       ]
     },
-    "labelNutrition": {
+    "inventoryItem": {
       "type": "object",
       "additionalProperties": false,
-      "minProperties": 1,
+      "required": ["product_index", "food_name", "quantity", "quantity_unit"],
       "properties": {
-        "energy_kj": { "type": ["number", "null"], "minimum": 0 },
-        "calories_kcal": { "type": ["number", "null"], "minimum": 0 },
-        "protein_g": { "type": ["number", "null"], "minimum": 0 },
-        "fat_g": { "type": ["number", "null"], "minimum": 0 },
-        "carbohydrate_g": { "type": ["number", "null"], "minimum": 0 },
-        "sodium_mg": { "type": ["number", "null"], "minimum": 0 },
-        "fiber_g": { "type": ["number", "null"], "minimum": 0 },
-        "sugar_g": { "type": ["number", "null"], "minimum": 0 },
-        "saturated_fat_g": { "type": ["number", "null"], "minimum": 0 },
-        "hydration_ml": { "type": ["number", "null"], "minimum": 0 }
+        "product_index": { "type": "integer", "minimum": 0, "maximum": 99 },
+        "food_name": { "type": "string", "minLength": 1, "maxLength": 1000, "pattern": "\\S" },
+        "quantity": { "type": "number", "exclusiveMinimum": 0, "maximum": 9999999999.99 },
+        "quantity_unit": { "type": "string", "minLength": 1, "maxLength": 40, "pattern": "\\S" },
+        "specification": { "type": ["string", "null"], "minLength": 1, "maxLength": 1000, "pattern": "\\S" },
+        "weight_or_volume": { "oneOf": [{ "$ref": "#/$defs/measurement" }, { "type": "null" }] },
+        "production_date": { "type": ["string", "null"], "format": "date", "minLength": 10, "maxLength": 10 }
       }
     },
-    "nutritionProfile": {
+    "inventoryExcludedItem": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["normalized_name", "serving_basis", "nutrition", "source_text", "source_grade"],
+      "required": ["product_index", "name", "reason"],
       "properties": {
-        "normalized_name": { "type": "string", "minLength": 1 },
-        "brand": { "type": "string", "minLength": 1 },
-        "product_key": { "type": "string", "minLength": 1 },
-        "serving_basis": { "enum": ["per_100g", "per_100ml", "per_serving"] },
-        "nutrition": { "$ref": "#/$defs/labelNutrition" },
-        "source_text": { "type": "string", "minLength": 1, "maxLength": 1000 },
-        "source_grade": { "enum": ["A", "B", "C", "D", "unknown"] }
+        "product_index": { "type": ["integer", "null"], "minimum": 0, "maximum": 99 },
+        "name": { "type": "string", "minLength": 1, "maxLength": 1000, "pattern": "\\S" },
+        "reason": { "type": "string", "minLength": 1, "maxLength": 500, "pattern": "\\S" }
       }
     },
-    "packageHierarchyItem": {
+    "inventoryContent": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["unit"],
+      "required": ["executable", "items", "excluded_items", "issues"],
       "properties": {
-        "quantity": { "type": "number", "exclusiveMinimum": 0 },
-        "per_parent": { "type": "number", "exclusiveMinimum": 0 },
-        "unit": { "type": "string", "minLength": 1, "maxLength": 40 }
-      },
-      "anyOf": [
-        { "required": ["quantity"] },
-        { "required": ["per_parent"] }
-      ]
-    },
-    "pantryAddItem": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["action", "food_name", "quantity", "unit", "source_text"],
-      "properties": {
-        "action": { "const": "add" },
-        "food_name": { "type": "string", "minLength": 1 },
-        "normalized_name": { "type": "string", "minLength": 1 },
-        "quantity": { "type": "number", "exclusiveMinimum": 0 },
-        "unit": {
-          "enum": [
-            "g", "gram", "grams", "ml", "milliliter", "milliliters",
-            "piece", "pieces", "portion", "portions", "pack", "packs"
-          ]
-        },
-        "package_count": { "type": "number", "exclusiveMinimum": 0 },
-        "quantity_per_package": { "type": "number", "exclusiveMinimum": 0 },
-        "package_unit": { "enum": ["g", "ml"] },
-        "display_quantity": { "type": "number", "exclusiveMinimum": 0 },
-        "display_unit": { "type": "string", "minLength": 1, "maxLength": 40 },
-        "base_quantity_per_display_unit": { "type": "number", "exclusiveMinimum": 0 },
-        "package_hierarchy": {
-          "type": "array",
-          "items": { "$ref": "#/$defs/packageHierarchyItem" },
-          "minItems": 1,
-          "maxItems": 4
-        },
-        "source_text": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 240,
-          "pattern": "^[^\\r\\n]+$"
-        },
-        "expiry_date": { "type": "string", "format": "date", "maxLength": 16384 },
-        "expires_at": { "type": ["string", "null"], "maxLength": 16384 },
-        "nutrition_profile": { "$ref": "#/$defs/nutritionProfile" }
-      },
-      "dependentRequired": {
-        "display_quantity": ["display_unit", "base_quantity_per_display_unit"],
-        "display_unit": ["display_quantity", "base_quantity_per_display_unit"],
-        "base_quantity_per_display_unit": ["display_quantity", "display_unit"],
-        "package_count": ["quantity_per_package", "package_unit"],
-        "quantity_per_package": ["package_count", "package_unit"],
-        "package_unit": ["package_count", "quantity_per_package"]
-      },
-      "oneOf": [
-        { "required": ["expiry_date"], "not": { "required": ["expires_at"] } },
-        { "required": ["expires_at"], "not": { "required": ["expiry_date"] } }
-      ]
-    },
-    "excludedItem": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["item_name", "status", "reason", "evidence"],
-      "properties": {
-        "item_name": { "type": "string", "minLength": 1, "maxLength": 240 },
-        "status": { "type": "string", "minLength": 1, "maxLength": 120 },
-        "reason": { "type": "string", "minLength": 1, "maxLength": 500 },
-        "evidence": {
-          "type": "array",
-          "items": { "$ref": "#/$defs/evidenceRecord" },
-          "maxItems": 20
-        }
-      }
-    },
-    "uncertainItem": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["item_name", "status", "reason", "evidence"],
-      "properties": {
-        "item_name": { "type": "string", "minLength": 1, "maxLength": 240 },
-        "status": { "type": "string", "minLength": 1, "maxLength": 120 },
-        "reason": { "type": "string", "minLength": 1, "maxLength": 500 },
-        "evidence": {
-          "type": "array",
-          "items": { "$ref": "#/$defs/evidenceRecord" },
-          "maxItems": 20
-        }
-      }
-    },
-    "itemAudit": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["item_index", "order_status", "evidence"],
-      "properties": {
-        "item_index": { "type": "integer", "minimum": 0 },
-        "order_status": { "enum": ["purchased_and_received"] },
-        "evidence": {
-          "type": "array",
-          "items": { "$ref": "#/$defs/evidenceRecord" },
-          "minItems": 1,
-          "maxItems": 20
-        }
-      }
-    },
-    "dietAdapterPayloadItem": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["source_product_index", "quantity", "unit", "display_quantity", "display_unit"],
-      "properties": {
-        "source_product_index": { "type": "integer", "minimum": 0, "maximum": 999999 },
-        "quantity": { "type": "number", "minimum": 0, "maximum": 9999999999.99 },
-        "unit": { "enum": ["g", "ml", "piece"] },
-        "display_quantity": { "type": ["number", "null"], "minimum": 0, "maximum": 9999999999.99 },
-        "display_unit": { "type": ["string", "null"], "maxLength": 40 }
-      }
-    },
-    "dietProjection": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["items", "item_audit", "excluded_items", "uncertain_items"],
-      "properties": {
+        "executable": { "type": "boolean" },
         "items": {
           "type": "array",
-          "items": { "$ref": "#/$defs/pantryAddItem" },
-          "maxItems": 100
+          "description": "Runtime validation requires each product_index to be unique within this array.",
+          "items": { "$ref": "#/$defs/inventoryItem" },
+          "maxItems": 100,
+          "uniqueItems": true
         },
-        "item_audit": {
-          "type": "array",
-          "items": { "$ref": "#/$defs/itemAudit" },
-          "maxItems": 100
-        },
-        "excluded_items": {
-          "type": "array",
-          "items": { "$ref": "#/$defs/excludedItem" },
-          "maxItems": 100
-        },
-        "uncertain_items": {
-          "type": "array",
-          "items": { "$ref": "#/$defs/uncertainItem" },
-          "maxItems": 100
-        },
-        "executable": { "type": "boolean" },
-        "business_products": { "type": "array", "items": { "$ref": "#/$defs/productFacts" }, "maxItems": 100 },
-        "adapter_payload": { "type": "array", "items": { "$ref": "#/$defs/dietAdapterPayloadItem" }, "maxItems": 100 }
+        "excluded_items": { "type": "array", "items": { "$ref": "#/$defs/inventoryExcludedItem" }, "maxItems": 100 },
+        "issues": { "type": "array", "items": { "type": "string", "minLength": 1, "maxLength": 500 }, "maxItems": 100 }
       }
     },
-    "quality": {
+    "handoff": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["visual_capability", "fact_set_status", "issues"],
+      "required": ["preview_id", "selected_scopes"],
       "properties": {
-        "visual_capability": { "enum": ["available", "unavailable"] },
-        "fact_set_status": { "enum": ["complete", "partial", "unavailable"] },
-        "issues": {
+        "preview_id": { "type": "string", "minLength": 16, "maxLength": 128, "pattern": "^[A-Za-z0-9._:-]+$" },
+        "selected_scopes": {
           "type": "array",
-          "items": { "type": "string", "minLength": 1, "maxLength": 500 },
-          "maxItems": 50
+          "items": { "enum": ["accounting", "inventory"] },
+          "minItems": 1,
+          "maxItems": 2,
+          "uniqueItems": true
         }
       }
     }

@@ -1,0 +1,1463 @@
+{
+  "schema_version": "image-intake-router.v3",
+  "preview_id": "preview:partial-nine:20260805:001",
+  "preview_state": "awaiting_confirmation",
+  "source": {
+    "image_count": 1,
+    "has_user_text": false
+  },
+  "recognition_run": {
+    "status": "partial",
+    "method": "native_vision",
+    "attachment_count": 1,
+    "processed_attachment_count": 1,
+    "attachments": [
+      {
+        "attachment_index": 0,
+        "status": "partial",
+        "completeness": "partial",
+        "limitations": [
+          "two item kinds are collapsed"
+        ]
+      }
+    ],
+    "issues": [
+      "two item kinds are not expanded"
+    ],
+    "pass_count": 1,
+    "refinement": {
+      "status": "not_needed",
+      "reasons": [],
+      "targeted_fields": [],
+      "attachment_indexes": [],
+      "issues": []
+    }
+  },
+  "cleaned_text": "\u8bc6\u522b\u5230 7 \u79cd\u5df2\u5c55\u5f00\u5546\u54c1\uff1b\u53e6\u6709 2 \u79cd\u5546\u54c1\u672a\u5c55\u5f00\u3002\u5b9e\u4ed8\u00a565.48\u3002",
+  "facts": {
+    "order": {
+      "merchant": {
+        "value": null,
+        "confidence": 0,
+        "calculated": false,
+        "evidence": []
+      },
+      "transaction_time": {
+        "value": null,
+        "confidence": 0,
+        "calculated": false,
+        "evidence": []
+      },
+      "order_status": {
+        "value": null,
+        "confidence": 0,
+        "calculated": false,
+        "evidence": []
+      },
+      "goods_subtotal": {
+        "value": null,
+        "confidence": 0,
+        "calculated": false,
+        "evidence": []
+      },
+      "activity_discount": {
+        "value": null,
+        "confidence": 0,
+        "calculated": false,
+        "evidence": []
+      },
+      "coupon_discount": {
+        "value": null,
+        "confidence": 0,
+        "calculated": false,
+        "evidence": []
+      },
+      "packaging_fee": {
+        "value": null,
+        "confidence": 0,
+        "calculated": false,
+        "evidence": []
+      },
+      "delivery_fee": {
+        "value": null,
+        "confidence": 0,
+        "calculated": false,
+        "evidence": []
+      },
+      "final_paid_amount": {
+        "value": 65.48,
+        "currency": "CNY",
+        "confidence": 0.98,
+        "calculated": false,
+        "evidence": [
+          {
+            "source": "visible_label",
+            "value": "65.48"
+          }
+        ]
+      },
+      "refund_total": {
+        "value": null,
+        "confidence": 0,
+        "calculated": false,
+        "evidence": []
+      },
+      "declared_item_kind_count": {
+        "value": 9,
+        "confidence": 0.98,
+        "calculated": false,
+        "evidence": [
+          {
+            "source": "visible_label",
+            "value": "9"
+          }
+        ]
+      },
+      "recognized_item_kind_count": {
+        "value": 7,
+        "confidence": 1,
+        "calculated": true,
+        "evidence": [
+          {
+            "source": "calculated",
+            "value": "7"
+          }
+        ]
+      },
+      "hidden_item_kind_count": {
+        "value": 2,
+        "confidence": 1,
+        "calculated": true,
+        "evidence": [
+          {
+            "source": "calculated",
+            "value": "2"
+          }
+        ]
+      },
+      "has_unexpanded_items": {
+        "value": true,
+        "confidence": 1,
+        "calculated": true,
+        "evidence": [
+          {
+            "source": "calculated",
+            "value": "true"
+          }
+        ]
+      },
+      "content_complete": {
+        "value": false,
+        "confidence": 1,
+        "calculated": true,
+        "evidence": [
+          {
+            "source": "calculated",
+            "value": "false"
+          }
+        ]
+      }
+    },
+    "products": [
+      {
+        "full_name": {
+          "value": "\u751c\u7389\u7c73",
+          "confidence": 0.98,
+          "calculated": false,
+          "evidence": [
+            {
+              "source": "visible_label",
+              "value": "\u751c\u7389\u7c73"
+            }
+          ]
+        },
+        "normalized_name": {
+          "value": "\u751c\u7389\u7c73",
+          "confidence": 0.98,
+          "calculated": false,
+          "evidence": [
+            {
+              "source": "visible_label",
+              "value": "\u751c\u7389\u7c73"
+            }
+          ]
+        },
+        "specification": {
+          "value": "\u7ea6850 g \u00d7 2",
+          "confidence": 0.98,
+          "calculated": false,
+          "evidence": [
+            {
+              "source": "visible_label",
+              "value": "\u7ea6850 g \u00d7 2"
+            }
+          ]
+        },
+        "purchase_quantity": {
+          "value": 2,
+          "unit": null,
+          "confidence": 0.98,
+          "calculated": false,
+          "evidence": [
+            {
+              "source": "visible_label",
+              "value": "2"
+            }
+          ]
+        },
+        "quantity_unit": {
+          "value": null,
+          "confidence": 0,
+          "calculated": false,
+          "evidence": []
+        },
+        "nominal_weight_or_volume": {
+          "value": 850,
+          "unit": "g",
+          "confidence": 0.98,
+          "calculated": false,
+          "evidence": [
+            {
+              "source": "visible_label",
+              "value": "850"
+            }
+          ]
+        },
+        "actual_weight_or_volume": {
+          "value": null,
+          "unit": null,
+          "confidence": 0,
+          "calculated": false,
+          "evidence": []
+        },
+        "billing_weight": {
+          "value": null,
+          "unit": null,
+          "confidence": 0,
+          "calculated": false,
+          "evidence": []
+        },
+        "weight_variance": {
+          "value": null,
+          "unit": null,
+          "confidence": 0,
+          "calculated": false,
+          "evidence": []
+        },
+        "original_amount": {
+          "value": null,
+          "currency": null,
+          "confidence": 0,
+          "calculated": false,
+          "evidence": []
+        },
+        "unit_price": {
+          "value": null,
+          "currency": null,
+          "confidence": 0,
+          "calculated": false,
+          "evidence": []
+        },
+        "line_paid_amount": {
+          "value": 11.78,
+          "currency": "CNY",
+          "confidence": 0.98,
+          "calculated": false,
+          "evidence": [
+            {
+              "source": "visible_label",
+              "value": "11.78"
+            }
+          ]
+        },
+        "refund_amount": {
+          "value": null,
+          "currency": null,
+          "confidence": 0,
+          "calculated": false,
+          "evidence": []
+        },
+        "production_date": {
+          "value": null,
+          "confidence": 0,
+          "calculated": false,
+          "evidence": []
+        },
+        "line_status": {
+          "value": "purchased_and_received",
+          "confidence": 0.98,
+          "calculated": false,
+          "evidence": [
+            {
+              "source": "visible_label",
+              "value": "purchased_and_received"
+            }
+          ]
+        },
+        "item_type": {
+          "value": "food",
+          "confidence": 0.98,
+          "calculated": false,
+          "evidence": [
+            {
+              "source": "visible_label",
+              "value": "food"
+            }
+          ]
+        },
+        "visibility_status": {
+          "value": "visible",
+          "confidence": 0.98,
+          "calculated": false,
+          "evidence": [
+            {
+              "source": "visible_label",
+              "value": "visible"
+            }
+          ]
+        }
+      },
+      {
+        "full_name": {
+          "value": "\u9c9c\u725b\u5976",
+          "confidence": 0.98,
+          "calculated": false,
+          "evidence": [
+            {
+              "source": "visible_label",
+              "value": "\u9c9c\u725b\u5976"
+            }
+          ]
+        },
+        "normalized_name": {
+          "value": "\u9c9c\u725b\u5976",
+          "confidence": 0.98,
+          "calculated": false,
+          "evidence": [
+            {
+              "source": "visible_label",
+              "value": "\u9c9c\u725b\u5976"
+            }
+          ]
+        },
+        "specification": {
+          "value": "1.5 L \u00d7 1",
+          "confidence": 0.98,
+          "calculated": false,
+          "evidence": [
+            {
+              "source": "visible_label",
+              "value": "1.5 L \u00d7 1"
+            }
+          ]
+        },
+        "purchase_quantity": {
+          "value": 1,
+          "unit": null,
+          "confidence": 0.98,
+          "calculated": false,
+          "evidence": [
+            {
+              "source": "visible_label",
+              "value": "1"
+            }
+          ]
+        },
+        "quantity_unit": {
+          "value": null,
+          "confidence": 0,
+          "calculated": false,
+          "evidence": []
+        },
+        "nominal_weight_or_volume": {
+          "value": 1.5,
+          "unit": "L",
+          "confidence": 0.98,
+          "calculated": false,
+          "evidence": [
+            {
+              "source": "visible_label",
+              "value": "1.5"
+            }
+          ]
+        },
+        "actual_weight_or_volume": {
+          "value": null,
+          "unit": null,
+          "confidence": 0,
+          "calculated": false,
+          "evidence": []
+        },
+        "billing_weight": {
+          "value": null,
+          "unit": null,
+          "confidence": 0,
+          "calculated": false,
+          "evidence": []
+        },
+        "weight_variance": {
+          "value": null,
+          "unit": null,
+          "confidence": 0,
+          "calculated": false,
+          "evidence": []
+        },
+        "original_amount": {
+          "value": null,
+          "currency": null,
+          "confidence": 0,
+          "calculated": false,
+          "evidence": []
+        },
+        "unit_price": {
+          "value": null,
+          "currency": null,
+          "confidence": 0,
+          "calculated": false,
+          "evidence": []
+        },
+        "line_paid_amount": {
+          "value": 10.9,
+          "currency": "CNY",
+          "confidence": 0.98,
+          "calculated": false,
+          "evidence": [
+            {
+              "source": "visible_label",
+              "value": "10.9"
+            }
+          ]
+        },
+        "refund_amount": {
+          "value": null,
+          "currency": null,
+          "confidence": 0,
+          "calculated": false,
+          "evidence": []
+        },
+        "production_date": {
+          "value": null,
+          "confidence": 0,
+          "calculated": false,
+          "evidence": []
+        },
+        "line_status": {
+          "value": "purchased_and_received",
+          "confidence": 0.98,
+          "calculated": false,
+          "evidence": [
+            {
+              "source": "visible_label",
+              "value": "purchased_and_received"
+            }
+          ]
+        },
+        "item_type": {
+          "value": "food",
+          "confidence": 0.98,
+          "calculated": false,
+          "evidence": [
+            {
+              "source": "visible_label",
+              "value": "food"
+            }
+          ]
+        },
+        "visibility_status": {
+          "value": "visible",
+          "confidence": 0.98,
+          "calculated": false,
+          "evidence": [
+            {
+              "source": "visible_label",
+              "value": "visible"
+            }
+          ]
+        }
+      },
+      {
+        "full_name": {
+          "value": "\u9ec4\u74dc",
+          "confidence": 0.98,
+          "calculated": false,
+          "evidence": [
+            {
+              "source": "visible_label",
+              "value": "\u9ec4\u74dc"
+            }
+          ]
+        },
+        "normalized_name": {
+          "value": "\u9ec4\u74dc",
+          "confidence": 0.98,
+          "calculated": false,
+          "evidence": [
+            {
+              "source": "visible_label",
+              "value": "\u9ec4\u74dc"
+            }
+          ]
+        },
+        "specification": {
+          "value": "\u7ea6700 g \u00d7 1",
+          "confidence": 0.98,
+          "calculated": false,
+          "evidence": [
+            {
+              "source": "visible_label",
+              "value": "\u7ea6700 g \u00d7 1"
+            }
+          ]
+        },
+        "purchase_quantity": {
+          "value": 1,
+          "unit": null,
+          "confidence": 0.98,
+          "calculated": false,
+          "evidence": [
+            {
+              "source": "visible_label",
+              "value": "1"
+            }
+          ]
+        },
+        "quantity_unit": {
+          "value": null,
+          "confidence": 0,
+          "calculated": false,
+          "evidence": []
+        },
+        "nominal_weight_or_volume": {
+          "value": 700,
+          "unit": "g",
+          "confidence": 0.98,
+          "calculated": false,
+          "evidence": [
+            {
+              "source": "visible_label",
+              "value": "700"
+            }
+          ]
+        },
+        "actual_weight_or_volume": {
+          "value": null,
+          "unit": null,
+          "confidence": 0,
+          "calculated": false,
+          "evidence": []
+        },
+        "billing_weight": {
+          "value": null,
+          "unit": null,
+          "confidence": 0,
+          "calculated": false,
+          "evidence": []
+        },
+        "weight_variance": {
+          "value": null,
+          "unit": null,
+          "confidence": 0,
+          "calculated": false,
+          "evidence": []
+        },
+        "original_amount": {
+          "value": null,
+          "currency": null,
+          "confidence": 0,
+          "calculated": false,
+          "evidence": []
+        },
+        "unit_price": {
+          "value": null,
+          "currency": null,
+          "confidence": 0,
+          "calculated": false,
+          "evidence": []
+        },
+        "line_paid_amount": {
+          "value": 4.99,
+          "currency": "CNY",
+          "confidence": 0.98,
+          "calculated": false,
+          "evidence": [
+            {
+              "source": "visible_label",
+              "value": "4.99"
+            }
+          ]
+        },
+        "refund_amount": {
+          "value": null,
+          "currency": null,
+          "confidence": 0,
+          "calculated": false,
+          "evidence": []
+        },
+        "production_date": {
+          "value": null,
+          "confidence": 0,
+          "calculated": false,
+          "evidence": []
+        },
+        "line_status": {
+          "value": "purchased_and_received",
+          "confidence": 0.98,
+          "calculated": false,
+          "evidence": [
+            {
+              "source": "visible_label",
+              "value": "purchased_and_received"
+            }
+          ]
+        },
+        "item_type": {
+          "value": "food",
+          "confidence": 0.98,
+          "calculated": false,
+          "evidence": [
+            {
+              "source": "visible_label",
+              "value": "food"
+            }
+          ]
+        },
+        "visibility_status": {
+          "value": "visible",
+          "confidence": 0.98,
+          "calculated": false,
+          "evidence": [
+            {
+              "source": "visible_label",
+              "value": "visible"
+            }
+          ]
+        }
+      },
+      {
+        "full_name": {
+          "value": "\u897f\u5170\u82b1",
+          "confidence": 0.98,
+          "calculated": false,
+          "evidence": [
+            {
+              "source": "visible_label",
+              "value": "\u897f\u5170\u82b1"
+            }
+          ]
+        },
+        "normalized_name": {
+          "value": "\u897f\u5170\u82b1",
+          "confidence": 0.98,
+          "calculated": false,
+          "evidence": [
+            {
+              "source": "visible_label",
+              "value": "\u897f\u5170\u82b1"
+            }
+          ]
+        },
+        "specification": {
+          "value": "\u7ea6600 g \u00d7 1",
+          "confidence": 0.98,
+          "calculated": false,
+          "evidence": [
+            {
+              "source": "visible_label",
+              "value": "\u7ea6600 g \u00d7 1"
+            }
+          ]
+        },
+        "purchase_quantity": {
+          "value": 1,
+          "unit": null,
+          "confidence": 0.98,
+          "calculated": false,
+          "evidence": [
+            {
+              "source": "visible_label",
+              "value": "1"
+            }
+          ]
+        },
+        "quantity_unit": {
+          "value": null,
+          "confidence": 0,
+          "calculated": false,
+          "evidence": []
+        },
+        "nominal_weight_or_volume": {
+          "value": 600,
+          "unit": "g",
+          "confidence": 0.98,
+          "calculated": false,
+          "evidence": [
+            {
+              "source": "visible_label",
+              "value": "600"
+            }
+          ]
+        },
+        "actual_weight_or_volume": {
+          "value": null,
+          "unit": null,
+          "confidence": 0,
+          "calculated": false,
+          "evidence": []
+        },
+        "billing_weight": {
+          "value": null,
+          "unit": null,
+          "confidence": 0,
+          "calculated": false,
+          "evidence": []
+        },
+        "weight_variance": {
+          "value": null,
+          "unit": null,
+          "confidence": 0,
+          "calculated": false,
+          "evidence": []
+        },
+        "original_amount": {
+          "value": null,
+          "currency": null,
+          "confidence": 0,
+          "calculated": false,
+          "evidence": []
+        },
+        "unit_price": {
+          "value": null,
+          "currency": null,
+          "confidence": 0,
+          "calculated": false,
+          "evidence": []
+        },
+        "line_paid_amount": {
+          "value": 3.95,
+          "currency": "CNY",
+          "confidence": 0.98,
+          "calculated": false,
+          "evidence": [
+            {
+              "source": "visible_label",
+              "value": "3.95"
+            }
+          ]
+        },
+        "refund_amount": {
+          "value": null,
+          "currency": null,
+          "confidence": 0,
+          "calculated": false,
+          "evidence": []
+        },
+        "production_date": {
+          "value": null,
+          "confidence": 0,
+          "calculated": false,
+          "evidence": []
+        },
+        "line_status": {
+          "value": "purchased_and_received",
+          "confidence": 0.98,
+          "calculated": false,
+          "evidence": [
+            {
+              "source": "visible_label",
+              "value": "purchased_and_received"
+            }
+          ]
+        },
+        "item_type": {
+          "value": "food",
+          "confidence": 0.98,
+          "calculated": false,
+          "evidence": [
+            {
+              "source": "visible_label",
+              "value": "food"
+            }
+          ]
+        },
+        "visibility_status": {
+          "value": "visible",
+          "confidence": 0.98,
+          "calculated": false,
+          "evidence": [
+            {
+              "source": "visible_label",
+              "value": "visible"
+            }
+          ]
+        }
+      },
+      {
+        "full_name": {
+          "value": "\u8c46\u6d46",
+          "confidence": 0.98,
+          "calculated": false,
+          "evidence": [
+            {
+              "source": "visible_label",
+              "value": "\u8c46\u6d46"
+            }
+          ]
+        },
+        "normalized_name": {
+          "value": "\u8c46\u6d46",
+          "confidence": 0.98,
+          "calculated": false,
+          "evidence": [
+            {
+              "source": "visible_label",
+              "value": "\u8c46\u6d46"
+            }
+          ]
+        },
+        "specification": {
+          "value": "1 L \u00d7 2",
+          "confidence": 0.98,
+          "calculated": false,
+          "evidence": [
+            {
+              "source": "visible_label",
+              "value": "1 L \u00d7 2"
+            }
+          ]
+        },
+        "purchase_quantity": {
+          "value": 2,
+          "unit": null,
+          "confidence": 0.98,
+          "calculated": false,
+          "evidence": [
+            {
+              "source": "visible_label",
+              "value": "2"
+            }
+          ]
+        },
+        "quantity_unit": {
+          "value": null,
+          "confidence": 0,
+          "calculated": false,
+          "evidence": []
+        },
+        "nominal_weight_or_volume": {
+          "value": 1,
+          "unit": "L",
+          "confidence": 0.98,
+          "calculated": false,
+          "evidence": [
+            {
+              "source": "visible_label",
+              "value": "1"
+            }
+          ]
+        },
+        "actual_weight_or_volume": {
+          "value": null,
+          "unit": null,
+          "confidence": 0,
+          "calculated": false,
+          "evidence": []
+        },
+        "billing_weight": {
+          "value": null,
+          "unit": null,
+          "confidence": 0,
+          "calculated": false,
+          "evidence": []
+        },
+        "weight_variance": {
+          "value": null,
+          "unit": null,
+          "confidence": 0,
+          "calculated": false,
+          "evidence": []
+        },
+        "original_amount": {
+          "value": null,
+          "currency": null,
+          "confidence": 0,
+          "calculated": false,
+          "evidence": []
+        },
+        "unit_price": {
+          "value": null,
+          "currency": null,
+          "confidence": 0,
+          "calculated": false,
+          "evidence": []
+        },
+        "line_paid_amount": {
+          "value": 13.0,
+          "currency": "CNY",
+          "confidence": 0.98,
+          "calculated": false,
+          "evidence": [
+            {
+              "source": "visible_label",
+              "value": "13.0"
+            }
+          ]
+        },
+        "refund_amount": {
+          "value": null,
+          "currency": null,
+          "confidence": 0,
+          "calculated": false,
+          "evidence": []
+        },
+        "production_date": {
+          "value": null,
+          "confidence": 0,
+          "calculated": false,
+          "evidence": []
+        },
+        "line_status": {
+          "value": "purchased_and_received",
+          "confidence": 0.98,
+          "calculated": false,
+          "evidence": [
+            {
+              "source": "visible_label",
+              "value": "purchased_and_received"
+            }
+          ]
+        },
+        "item_type": {
+          "value": "food",
+          "confidence": 0.98,
+          "calculated": false,
+          "evidence": [
+            {
+              "source": "visible_label",
+              "value": "food"
+            }
+          ]
+        },
+        "visibility_status": {
+          "value": "visible",
+          "confidence": 0.98,
+          "calculated": false,
+          "evidence": [
+            {
+              "source": "visible_label",
+              "value": "visible"
+            }
+          ]
+        }
+      },
+      {
+        "full_name": {
+          "value": "\u4e91\u5357\u751f\u83dc",
+          "confidence": 0.98,
+          "calculated": false,
+          "evidence": [
+            {
+              "source": "visible_label",
+              "value": "\u4e91\u5357\u751f\u83dc"
+            }
+          ]
+        },
+        "normalized_name": {
+          "value": "\u4e91\u5357\u751f\u83dc",
+          "confidence": 0.98,
+          "calculated": false,
+          "evidence": [
+            {
+              "source": "visible_label",
+              "value": "\u4e91\u5357\u751f\u83dc"
+            }
+          ]
+        },
+        "specification": {
+          "value": "\u7ea6500 g \u00d7 1",
+          "confidence": 0.98,
+          "calculated": false,
+          "evidence": [
+            {
+              "source": "visible_label",
+              "value": "\u7ea6500 g \u00d7 1"
+            }
+          ]
+        },
+        "purchase_quantity": {
+          "value": 1,
+          "unit": null,
+          "confidence": 0.98,
+          "calculated": false,
+          "evidence": [
+            {
+              "source": "visible_label",
+              "value": "1"
+            }
+          ]
+        },
+        "quantity_unit": {
+          "value": null,
+          "confidence": 0,
+          "calculated": false,
+          "evidence": []
+        },
+        "nominal_weight_or_volume": {
+          "value": 500,
+          "unit": "g",
+          "confidence": 0.98,
+          "calculated": false,
+          "evidence": [
+            {
+              "source": "visible_label",
+              "value": "500"
+            }
+          ]
+        },
+        "actual_weight_or_volume": {
+          "value": null,
+          "unit": null,
+          "confidence": 0,
+          "calculated": false,
+          "evidence": []
+        },
+        "billing_weight": {
+          "value": null,
+          "unit": null,
+          "confidence": 0,
+          "calculated": false,
+          "evidence": []
+        },
+        "weight_variance": {
+          "value": null,
+          "unit": null,
+          "confidence": 0,
+          "calculated": false,
+          "evidence": []
+        },
+        "original_amount": {
+          "value": null,
+          "currency": null,
+          "confidence": 0,
+          "calculated": false,
+          "evidence": []
+        },
+        "unit_price": {
+          "value": null,
+          "currency": null,
+          "confidence": 0,
+          "calculated": false,
+          "evidence": []
+        },
+        "line_paid_amount": {
+          "value": 4.96,
+          "currency": "CNY",
+          "confidence": 0.98,
+          "calculated": false,
+          "evidence": [
+            {
+              "source": "visible_label",
+              "value": "4.96"
+            }
+          ]
+        },
+        "refund_amount": {
+          "value": null,
+          "currency": null,
+          "confidence": 0,
+          "calculated": false,
+          "evidence": []
+        },
+        "production_date": {
+          "value": null,
+          "confidence": 0,
+          "calculated": false,
+          "evidence": []
+        },
+        "line_status": {
+          "value": "purchased_and_received",
+          "confidence": 0.98,
+          "calculated": false,
+          "evidence": [
+            {
+              "source": "visible_label",
+              "value": "purchased_and_received"
+            }
+          ]
+        },
+        "item_type": {
+          "value": "food",
+          "confidence": 0.98,
+          "calculated": false,
+          "evidence": [
+            {
+              "source": "visible_label",
+              "value": "food"
+            }
+          ]
+        },
+        "visibility_status": {
+          "value": "visible",
+          "confidence": 0.98,
+          "calculated": false,
+          "evidence": [
+            {
+              "source": "visible_label",
+              "value": "visible"
+            }
+          ]
+        }
+      },
+      {
+        "full_name": {
+          "value": "\u9999\u8549",
+          "confidence": 0.98,
+          "calculated": false,
+          "evidence": [
+            {
+              "source": "visible_label",
+              "value": "\u9999\u8549"
+            }
+          ]
+        },
+        "normalized_name": {
+          "value": "\u9999\u8549",
+          "confidence": 0.98,
+          "calculated": false,
+          "evidence": [
+            {
+              "source": "visible_label",
+              "value": "\u9999\u8549"
+            }
+          ]
+        },
+        "specification": {
+          "value": "\u7ea6800 g \u00d7 1",
+          "confidence": 0.98,
+          "calculated": false,
+          "evidence": [
+            {
+              "source": "visible_label",
+              "value": "\u7ea6800 g \u00d7 1"
+            }
+          ]
+        },
+        "purchase_quantity": {
+          "value": 1,
+          "unit": null,
+          "confidence": 0.98,
+          "calculated": false,
+          "evidence": [
+            {
+              "source": "visible_label",
+              "value": "1"
+            }
+          ]
+        },
+        "quantity_unit": {
+          "value": null,
+          "confidence": 0,
+          "calculated": false,
+          "evidence": []
+        },
+        "nominal_weight_or_volume": {
+          "value": 800,
+          "unit": "g",
+          "confidence": 0.98,
+          "calculated": false,
+          "evidence": [
+            {
+              "source": "visible_label",
+              "value": "800"
+            }
+          ]
+        },
+        "actual_weight_or_volume": {
+          "value": null,
+          "unit": null,
+          "confidence": 0,
+          "calculated": false,
+          "evidence": []
+        },
+        "billing_weight": {
+          "value": null,
+          "unit": null,
+          "confidence": 0,
+          "calculated": false,
+          "evidence": []
+        },
+        "weight_variance": {
+          "value": null,
+          "unit": null,
+          "confidence": 0,
+          "calculated": false,
+          "evidence": []
+        },
+        "original_amount": {
+          "value": null,
+          "currency": null,
+          "confidence": 0,
+          "calculated": false,
+          "evidence": []
+        },
+        "unit_price": {
+          "value": null,
+          "currency": null,
+          "confidence": 0,
+          "calculated": false,
+          "evidence": []
+        },
+        "line_paid_amount": {
+          "value": 11.9,
+          "currency": "CNY",
+          "confidence": 0.98,
+          "calculated": false,
+          "evidence": [
+            {
+              "source": "visible_label",
+              "value": "11.9"
+            }
+          ]
+        },
+        "refund_amount": {
+          "value": null,
+          "currency": null,
+          "confidence": 0,
+          "calculated": false,
+          "evidence": []
+        },
+        "production_date": {
+          "value": null,
+          "confidence": 0,
+          "calculated": false,
+          "evidence": []
+        },
+        "line_status": {
+          "value": "purchased_and_received",
+          "confidence": 0.98,
+          "calculated": false,
+          "evidence": [
+            {
+              "source": "visible_label",
+              "value": "purchased_and_received"
+            }
+          ]
+        },
+        "item_type": {
+          "value": "food",
+          "confidence": 0.98,
+          "calculated": false,
+          "evidence": [
+            {
+              "source": "visible_label",
+              "value": "food"
+            }
+          ]
+        },
+        "visibility_status": {
+          "value": "visible",
+          "confidence": 0.98,
+          "calculated": false,
+          "evidence": [
+            {
+              "source": "visible_label",
+              "value": "visible"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "accounting_content": {
+    "executable": true,
+    "merchant": null,
+    "transaction_time": null,
+    "final_paid_amount": 65.48,
+    "items": [
+      {
+        "product_index": 0,
+        "full_name": "\u751c\u7389\u7c73",
+        "specification": "\u7ea6850 g \u00d7 2",
+        "quantity": 2,
+        "quantity_unit": null,
+        "nominal_weight_or_volume": {
+          "value": 850,
+          "unit": "g"
+        },
+        "actual_weight_or_volume": null,
+        "weight_variance": null,
+        "line_paid_amount": 11.78,
+        "refund_amount": null
+      },
+      {
+        "product_index": 1,
+        "full_name": "\u9c9c\u725b\u5976",
+        "specification": "1.5 L \u00d7 1",
+        "quantity": 1,
+        "quantity_unit": null,
+        "nominal_weight_or_volume": {
+          "value": 1.5,
+          "unit": "L"
+        },
+        "actual_weight_or_volume": null,
+        "weight_variance": null,
+        "line_paid_amount": 10.9,
+        "refund_amount": null
+      },
+      {
+        "product_index": 2,
+        "full_name": "\u9ec4\u74dc",
+        "specification": "\u7ea6700 g \u00d7 1",
+        "quantity": 1,
+        "quantity_unit": null,
+        "nominal_weight_or_volume": {
+          "value": 700,
+          "unit": "g"
+        },
+        "actual_weight_or_volume": null,
+        "weight_variance": null,
+        "line_paid_amount": 4.99,
+        "refund_amount": null
+      },
+      {
+        "product_index": 3,
+        "full_name": "\u897f\u5170\u82b1",
+        "specification": "\u7ea6600 g \u00d7 1",
+        "quantity": 1,
+        "quantity_unit": null,
+        "nominal_weight_or_volume": {
+          "value": 600,
+          "unit": "g"
+        },
+        "actual_weight_or_volume": null,
+        "weight_variance": null,
+        "line_paid_amount": 3.95,
+        "refund_amount": null
+      },
+      {
+        "product_index": 4,
+        "full_name": "\u8c46\u6d46",
+        "specification": "1 L \u00d7 2",
+        "quantity": 2,
+        "quantity_unit": null,
+        "nominal_weight_or_volume": {
+          "value": 1,
+          "unit": "L"
+        },
+        "actual_weight_or_volume": null,
+        "weight_variance": null,
+        "line_paid_amount": 13.0,
+        "refund_amount": null
+      },
+      {
+        "product_index": 5,
+        "full_name": "\u4e91\u5357\u751f\u83dc",
+        "specification": "\u7ea6500 g \u00d7 1",
+        "quantity": 1,
+        "quantity_unit": null,
+        "nominal_weight_or_volume": {
+          "value": 500,
+          "unit": "g"
+        },
+        "actual_weight_or_volume": null,
+        "weight_variance": null,
+        "line_paid_amount": 4.96,
+        "refund_amount": null
+      },
+      {
+        "product_index": 6,
+        "full_name": "\u9999\u8549",
+        "specification": "\u7ea6800 g \u00d7 1",
+        "quantity": 1,
+        "quantity_unit": null,
+        "nominal_weight_or_volume": {
+          "value": 800,
+          "unit": "g"
+        },
+        "actual_weight_or_volume": null,
+        "weight_variance": null,
+        "line_paid_amount": 11.9,
+        "refund_amount": null
+      }
+    ],
+    "issues": [
+      "two item kinds are not expanded"
+    ]
+  },
+  "inventory_content": {
+    "executable": true,
+    "items": [
+      {
+        "product_index": 0,
+        "food_name": "\u751c\u7389\u7c73",
+        "quantity": 1700,
+        "quantity_unit": "g",
+        "specification": "\u7ea6850 g \u00d7 2",
+        "weight_or_volume": null,
+        "production_date": null
+      },
+      {
+        "product_index": 1,
+        "food_name": "\u9c9c\u725b\u5976",
+        "quantity": 1500,
+        "quantity_unit": "ml",
+        "specification": "1.5 L \u00d7 1",
+        "weight_or_volume": null,
+        "production_date": null
+      },
+      {
+        "product_index": 2,
+        "food_name": "\u9ec4\u74dc",
+        "quantity": 700,
+        "quantity_unit": "g",
+        "specification": "\u7ea6700 g \u00d7 1",
+        "weight_or_volume": null,
+        "production_date": null
+      },
+      {
+        "product_index": 3,
+        "food_name": "\u897f\u5170\u82b1",
+        "quantity": 600,
+        "quantity_unit": "g",
+        "specification": "\u7ea6600 g \u00d7 1",
+        "weight_or_volume": null,
+        "production_date": null
+      },
+      {
+        "product_index": 4,
+        "food_name": "\u8c46\u6d46",
+        "quantity": 2000,
+        "quantity_unit": "ml",
+        "specification": "1 L \u00d7 2",
+        "weight_or_volume": null,
+        "production_date": null
+      },
+      {
+        "product_index": 5,
+        "food_name": "\u4e91\u5357\u751f\u83dc",
+        "quantity": 500,
+        "quantity_unit": "g",
+        "specification": "\u7ea6500 g \u00d7 1",
+        "weight_or_volume": null,
+        "production_date": null
+      },
+      {
+        "product_index": 6,
+        "food_name": "\u9999\u8549",
+        "quantity": 800,
+        "quantity_unit": "g",
+        "specification": "\u7ea6800 g \u00d7 1",
+        "weight_or_volume": null,
+        "production_date": null
+      }
+    ],
+    "excluded_items": [],
+    "issues": [
+      "two item kinds are not expanded"
+    ]
+  },
+  "warnings": [
+    "\u53e6\u6709 2 \u79cd\u5546\u54c1\u672a\u5c55\u5f00",
+    "\u53e6\u6709 2 \u79cd\u5546\u54c1\u672a\u5c55\u5f00\uff0c\u672c\u6b21\u672a\u8bc6\u522b\u3001\u672a\u731c\u6d4b\u3001\u4e0d\u4f1a\u63d0\u4ea4\u3002"
+  ],
+  "handoff": null
+}

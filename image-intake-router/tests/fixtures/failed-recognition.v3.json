@@ -1,0 +1,148 @@
+{
+  "schema_version": "image-intake-router.v3",
+  "preview_id": "preview:failed:20260805:001",
+  "preview_state": "failed",
+  "source": {
+    "image_count": 1,
+    "has_user_text": false
+  },
+  "recognition_run": {
+    "status": "failed",
+    "method": "native_vision",
+    "pass_count": 0,
+    "refinement": {
+      "status": "not_applicable",
+      "reasons": [],
+      "targeted_fields": [],
+      "attachment_indexes": [],
+      "issues": []
+    },
+    "attachment_count": 1,
+    "processed_attachment_count": 1,
+    "attachments": [
+      {
+        "attachment_index": 0,
+        "status": "failed",
+        "completeness": "unavailable",
+        "limitations": [
+          "visual recognition failed"
+        ]
+      }
+    ],
+    "issues": [
+      "visual recognition failed"
+    ]
+  },
+  "cleaned_text": null,
+  "facts": {
+    "order": {
+      "merchant": {
+        "value": null,
+        "confidence": 0,
+        "calculated": false,
+        "evidence": []
+      },
+      "transaction_time": {
+        "value": null,
+        "confidence": 0,
+        "calculated": false,
+        "evidence": []
+      },
+      "order_status": {
+        "value": null,
+        "confidence": 0,
+        "calculated": false,
+        "evidence": []
+      },
+      "goods_subtotal": {
+        "value": null,
+        "confidence": 0,
+        "calculated": false,
+        "evidence": [],
+        "currency": null
+      },
+      "activity_discount": {
+        "value": null,
+        "confidence": 0,
+        "calculated": false,
+        "evidence": [],
+        "currency": null
+      },
+      "coupon_discount": {
+        "value": null,
+        "confidence": 0,
+        "calculated": false,
+        "evidence": [],
+        "currency": null
+      },
+      "packaging_fee": {
+        "value": null,
+        "confidence": 0,
+        "calculated": false,
+        "evidence": [],
+        "currency": null
+      },
+      "delivery_fee": {
+        "value": null,
+        "confidence": 0,
+        "calculated": false,
+        "evidence": [],
+        "currency": null
+      },
+      "final_paid_amount": {
+        "value": null,
+        "confidence": 0,
+        "calculated": false,
+        "evidence": [],
+        "currency": null
+      },
+      "refund_total": {
+        "value": null,
+        "confidence": 0,
+        "calculated": false,
+        "evidence": [],
+        "currency": null
+      },
+      "declared_item_kind_count": {
+        "value": null,
+        "confidence": 0,
+        "calculated": false,
+        "evidence": []
+      },
+      "recognized_item_kind_count": {
+        "value": null,
+        "confidence": 0,
+        "calculated": false,
+        "evidence": []
+      },
+      "hidden_item_kind_count": {
+        "value": null,
+        "confidence": 0,
+        "calculated": false,
+        "evidence": []
+      },
+      "has_unexpanded_items": {
+        "value": null,
+        "confidence": 0,
+        "calculated": false,
+        "evidence": []
+      },
+      "content_complete": {
+        "value": null,
+        "confidence": 0,
+        "calculated": false,
+        "evidence": []
+      }
+    },
+    "products": [],
+    "unresolved_issues": [
+      "visual recognition failed"
+    ]
+  },
+  "accounting_content": null,
+  "inventory_content": null,
+  "warnings": [
+    "\u56fe\u50cf\u8bc6\u522b\u5931\u8d25\uff0c\u672a\u751f\u6210\u53ef\u6267\u884c\u5185\u5bb9\u3002"
+  ],
+  "handoff": null
+}
