@@ -100,7 +100,7 @@ Expected RED evidence:
 - P01: current runtime contract forbids a second visual pass, so it cannot implement the approved one-time targeted refinement.
 - P02: current output contract defaults to one or two sentences and hides full visible line details.
 - P03: current projection and recovery references own ledger/pantry payloads and downstream execution states.
-- P04: current materials may preserve visible-only behavior, but still perform downstream adapter execution rather than an OpenClaw-only handoff.
+- P04: current materials PASS visible-only handling and duplicate-confirmation safety; OpenClaw ownership gap is tested by P03 only.
 
 - [ ] **Step 3: Record baseline outputs verbatim**
 
