@@ -14,9 +14,8 @@ DOC_FILES = ("docs/INSTALL.md", "docs/UPGRADING.md", "docs/AI-PROMPTS.md")
 REFERENCE_FILES = (
     "calculation-rules.md",
     "confirmation-and-execution.md",
-    "failure-recovery.md",
+    "openclaw-handoff.md",
     "output-contract.md",
-    "projection-contracts.md",
     "recognition-rules.md",
     "vision-runtime.md",
 )

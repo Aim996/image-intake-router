@@ -1,15 +1,21 @@
-# image-intake-router 2.1.0 Release Notes
+# image-intake-router 3.0.0 Release Notes
 
-Multi-attachment recognition now fails closed when any attachment fails or when a mixed batch contains an attachment that was not executed. Such a run has unavailable facts, null projections, no preview or confirmation state, no adapter execution, and zero business writes. A screenshot with usable pixel-derived facts plus disclosed crop, fold, blur, occlusion, or hidden-row limitations remains an executable `partial` result.
+3.0.0 将产品聚焦为识图、预览与确认入口，使用 Schema `image-intake-router.v3`。每张图片先进行一次真实视觉识别；若初次结果遗漏可见关键字段，允许最多一次补充识读。清洗文字、字段证据和限制会合并为一个统一事实集。
 
-## 主要变化
+## 用户体验
 
-2.1.0 将图片处理升级为一次真实像素/媒体识别后的统一详细事实：商品名、规格、数量、重量/容量、实付、退款、商家、时间、状态、来源、置信度和图片完整性可被下游安全复用。随手账收到标量商品明细（名称、规格、数量、实付与退款），食序管家复用同一事实，不再进行第二次读图。
+初始含图回合依次输出详细的 `【入账内容】`、`【入库内容】`、`【需要注意】`，并创建零次下游交接。用户在后续回合明确肯定确认后，OpenClaw 才发现并调用合适的下游 Skill，且同一确认最多交接一次；`只记账` 与 `只入库` 可限制范围。
 
-初始图片回合只给简洁预览、零业务写入；用户随后只确认一次业务内容。视觉结果缺失、失败或有任一附件未执行时失败关闭；部分或折叠图片会报告可见和隐藏数量，绝不猜测。
+隐藏、遮挡、裁切、模糊、被阻止或不可读内容会披露而不会猜测。可靠可见内容仍可使用；存在隐藏项目时，只交接可靠可见内容并保留限制说明。
+
+## 所有权变化
+
+路由器不再发布或拥有下游专用 adapter manifest、固定逻辑 endpoint/端口、preflight/execute/status Schema、私有 payload 映射、幂等/重试/状态协议或版本协商。OpenClaw 负责下游 Skill 发现和调用，下游 Skill 负责自己的执行、存储、恢复与兼容性。
+
+v3 不迁移、修改或删除任何下游数据，不修改下游项目、私有 API 或数据库，也不要求下游仓库/API 变化。
 
 ## 安装与回滚
 
-发布时使用精确资产 `image-intake-router-2.1.0.tgz` 与 `image-intake-router-2.1.0.tgz.sha256`。按 [安装指南](docs/INSTALL.md) 配置真实图片能力、全附件处理和 SHA-256 校验，然后只安装嵌套 Skill 目录。
+3.0.0 的精确发布资产为 `image-intake-router-3.0.0.tgz` 和 `image-intake-router-3.0.0.tgz.sha256`。按照 [安装指南](docs/INSTALL.md) 在每台设备上分别从固定 GitHub Release 下载、核验 SHA-256，并只安装归档内嵌套 Skill 目录。
 
-v2.0.1 的历史、[tag URL](https://github.com/Aim996/image-intake-router/releases/tag/v2.0.1)、`image-intake-router-2.0.1.tgz` 和校验文件保持不变，作为可恢复的回滚目标。此次发布不迁移、覆盖或创建下游数据库。
+保留不可变的 [v2.1.0 Release](https://github.com/Aim996/image-intake-router/releases/tag/v2.1.0)、精确旧资产 `image-intake-router-2.1.0.tgz`、`image-intake-router-2.1.0.tgz.sha256`、已验证旧 Skill 目录和旧 OpenClaw 配置。若 v3 UAT 不通过，按 [更新与回滚](docs/UPGRADING.md) 恢复这些内容；不要重命名或删除旧 tag/资产，也不要覆盖、迁移或恢复下游数据库。

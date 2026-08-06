@@ -1,34 +1,24 @@
 # image-intake-router
 
-`image-intake-router` is a local OpenClaw Skill for payment screenshots, receipts, order pages, nutrition labels, food packages, grocery screenshots, and meal photos. Version **2.1.0** uses a real pixel/media recognition run once per attachment batch, builds unified detailed facts, then creates an expense projection and a pantry projection without reading the images again.
+`image-intake-router` 3.0.0 is a local OpenClaw Skill for payment screenshots, receipts, order pages, nutrition labels, food packages, grocery screenshots, and meal photos. Its schema is `image-intake-router.v3`.
 
-## Current version and safe rollback
+The router owns focused image recognition and confirmation: every image gets one initial visual pass, followed by at most one omission-driven targeted refinement when needed. It cleans visible text into one canonical fact set, audits visible fields, and produces a detailed preview in the exact order `【入账内容】`, `【入库内容】`, `【需要注意】`.
 
-The current product version is **2.1.0** and its protocol is `image-intake-router.v2.1`. Install the exact assets from the 2.1.0 release when it is published: `image-intake-router-2.1.0.tgz` and `image-intake-router-2.1.0.tgz.sha256`.
+The initial image turn only previews and creates zero handoffs. A later affirmative confirmation creates at most one handoff; `只记账` and `只入库` limit its scope. OpenClaw discovers and invokes downstream Skills. The router does not own downstream execution, inspect or modify downstream projects/private APIs/databases, or define private adapter payloads, ports, retries, or status protocols.
 
-Keep the immutable [v2.0.1 release](https://github.com/Aim996/image-intake-router/releases/tag/v2.0.1), its `image-intake-router-2.0.1.tgz` and checksum, and the prior OpenClaw configuration as a rollback target. Do not overwrite an existing Skill directory or a downstream database while updating.
+Hidden, blocked, cropped, blurred, or unreadable content is disclosed rather than guessed. Reliable visible content remains usable, including visible-only handoff when other items are hidden. Version 3 does not migrate, modify, or delete downstream data and requires no downstream repository or API changes.
 
-## What changes for users
+## Install and safe rollback
 
-- A batch has one true visual recognition run; attachment filenames and descriptions do not create facts.
-- Unified facts retain product names, specifications, quantities, paid amounts, refunds, merchant, time, order status, source, confidence, calculations, and image completeness.
-- The expense adapter receives scalar line items with name, specification, quantity, paid amount, and refund detail. The pantry adapter consumes the same facts without a second image read.
-- The initial image turn makes zero business writes and gives one concise preview. A later business confirmation is required once; adapter-only technical repair uses the same digest and does not ask again or duplicate writes.
-- A failed or missing visual result for any attachment fails closed: no preview and no business write. Folded or incomplete screenshots state visible and hidden counts without guessing hidden products.
+Install the exact v3 assets `image-intake-router-3.0.0.tgz` and `image-intake-router-3.0.0.tgz.sha256` by following [the installation guide](docs/INSTALL.md). It includes SHA-256 verification, Windows PowerShell, Linux/NAS commands, the nested Skill layout, and business-level UAT. Multiple devices can repeat the same fixed GitHub Release commands independently.
 
-## Install and validate
+Keep the immutable [v2.1.0 release](https://github.com/Aim996/image-intake-router/releases/tag/v2.1.0), exact assets `image-intake-router-2.1.0.tgz` and `image-intake-router-2.1.0.tgz.sha256`, the verified old Skill directory, and the prior OpenClaw configuration as the rollback target. Follow [the upgrading guide](docs/UPGRADING.md) to restore them without touching downstream data. Old tags and assets must not be renamed or deleted.
 
-Follow [the installation guide](docs/INSTALL.md) to verify SHA-256, configure real image media, install only the nested Skill directory, and perform the business-level UAT. Follow [the upgrading guide](docs/UPGRADING.md) for side-by-side installation and rollback.
-
-For OpenClaw media behavior, see the official [media-understanding guide](https://github.com/openclaw/openclaw/blob/main/docs/nodes/media-understanding.md) and [media overview](https://docs.openclaw.ai/tools/media-overview).
+For the complete public behavior, see [识图输出与确认规范](识图输出与确认规范.md). For OpenClaw media behavior, see the official [media-understanding guide](https://github.com/openclaw/openclaw/blob/main/docs/nodes/media-understanding.md) and [media overview](https://docs.openclaw.ai/tools/media-overview).
 
 ## Data boundary
 
-The router does not store original images, paths, base64, full OCR, credentials, or local business databases. It routes confirmed public facts to downstream Skills; those Skills own their own local data. Unsupported business cases include income, balances, transfers, loans, investments, assets, guessed hidden products, and writing anything from a visual run that is absent or incomplete.
-
-## Integrating other software
-
-The router publishes facts and an adapter contract; it does not take ownership of a downstream repository, API, or database. Downstream maintainers implement the adapter in their own project or in a separate integration project. See the Chinese [external software adapter contract](适配接口规范.md) for capability discovery, preflight, one-confirmation execution, idempotency, status recovery, versioning, and the explicit ownership boundary.
+The router does not store original images, paths, base64, full OCR, credentials, or local business databases. It does not migrate, modify, delete, retry, or query downstream data. Downstream Skills own their validation, execution, storage, recovery, and compatibility.
 
 ## Development checks
 

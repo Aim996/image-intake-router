@@ -24,7 +24,7 @@ jobs:
         run: python -m unittest tests.test_repository_contract -v
       - name: Run Skill static contracts
         run: python image-intake-router/tests/test_static_contract.py -v
-      - name: Validate v2.1 fixtures against schema
+      - name: Validate v3 fixtures against schema
         run: python image-intake-router/tests/test_schema_fixtures.py -v
       - name: Parse schema
         run: python -m json.tool image-intake-router/templates/image-intake-router.schema.json
