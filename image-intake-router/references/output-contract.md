@@ -1,29 +1,35 @@
 # Output contract
 
-## Default business output
+## Default response
 
-The default preview and receipt are one or two business sentences. Before confirmation, state the recognised paid amount/category meaning, visible and hidden product/completeness summary, and what executable scopes will run after confirmation. If only one domain is executable, say the other will not run and why without blocking the executable domain. Full details only on request, omission questions, or diagnostics.
+The default response is a detailed business preview, not internal JSON. Use this literal section order and closing line:
 
-Approved concise preview example (an example, not a mandatory fixed skeleton):
+```text
+识别完成
 
-> 识别到本单实付 ¥65.48，共至少 9 种商品；图片完整展示了 7 种，另外 2 种未展开。准备记账 ¥65.48，并将 7 种可见食品交给食序管家，是否确认？
+【入账内容】
+商家：某某超市
+时间：2026-08-06 18:30
+实付：¥65.48
+1. 甜玉米，约850g × 2，实付 ¥11.78
+2. 鲜牛奶，1.5L × 1，实付 ¥10.90
 
-Approved concise receipt example (also an example, not a mandatory fixed skeleton):
+【入库内容】
+1. 甜玉米，约850g × 2
+2. 鲜牛奶，1.5L × 1
 
-> 已记账 ¥65.48，完整保存了 7 种可见商品的名称、重量、数量和价格；食序管家成功入库 6 种，1 种因数量不明确未提交。
+【需要注意】
+页面显示另有 2 种商品未展开，本次未识别、未猜测、不会提交。
 
-After confirmation, state the completed business result and any safe omission reason. A failed or not-executed `recognition_run` produces no business preview or confirmation prompt, no business projections, no adapter execution, and no business write; give a short failure explanation and ask for real visual capability or a re-upload instead. A whole attachment that failed or was skipped in a mixed batch cannot be presented as a partial preview.
+请核实以上内容，回复“确认”后执行。
+```
 
-## What remains visible
+The preview must **list every visible recognized product**. In accounting, product lines include **name, quantity, specification or weight, and line paid amount** whenever those fields are visible. Compact punctuation is allowed, but no visible row may be dropped. Show merchant, transaction time, final paid amount, refunds, weight variance, status, and other useful order or product details when they are visibly available.
 
-Visible order detail remains in structured expense `line_items`; a note summary never deletes or truncates those rows. Refund facts remain visible as facts but do not create a refund write. Do not claim an unsubmitted item was written. A partial order preview says that only visible rows were forwarded and keeps the completeness warning.
+Inventory lists every visible product eligible under the inventory rules. `【需要注意】` explains hidden rows, unreadable or uncertain fields, excluded products, cancelled or refunded rows, and not-received products. If accounting or inventory has no content, keep the section and show a concise business reason instead of an empty object.
+
+For a failed visual run, do not fabricate this preview or ask for confirmation. Give a concise failure explanation and request usable visual capability or a re-upload.
 
 ## Default redaction
 
-Default output must not show internal evidence enums such as `visible_label` or `user_text`, `attachment_context`, category ID `shopping`, an ISO timestamp, `expires_at`, technical `piece`, preview revision, operation/call IDs, adapter versions, or internal execution-state names. It also must not show internal handles, stable IDs, raw payload ordering, or strict-normalization details.
-
-Details may expose only the minimum useful field/evidence/confidence/adapter/error explanation. Even diagnostics must not expose credentials, raw images, paths, base64, full OCR, payment accounts, or sensitive downstream identifiers.
-
-## Confirmation language
-
-Ask for confirmation only after presenting the current business digest. Map later replies exactly: `确认`/`可以`/`就这样` => all executable scopes; `只记账` => expense only; `只入库` => diet only. A question is not confirmation. A changed digest produces a new concise preview and requires a new confirmation; an adapter-only correction stays under its original confirmation according to the recovery contract.
+Default output hides evidence enums, schema keys, preview IDs, pass counts, tool names, and internal states. It also hides raw images, paths, URLs, base64, full OCR, credentials, payment accounts, and sensitive identifiers. The default response stays in business language even though the handoff retains cleaned text and structured facts.

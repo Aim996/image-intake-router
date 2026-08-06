@@ -1,21 +1,29 @@
-# Confirmation and execution
+# Confirmation and OpenClaw handoff
 
-## Canonical business digest
+The router uses only this state flow:
 
-Build `business_digest` from the canonical representation of the user-confirmed business content and retain a stable fingerprint over that representation. It includes final paid amount and category business meaning; merchant and business time; every product's name, purchase count, display unit, specification, weights/volumes, line paid amount, and refund; expense/diet selected scopes and included/excluded product identities; and declared/visible/hidden counts plus the completeness warning.
+```text
+recognizing → awaiting_confirmation → handed_off
+     ├──────────── not_actionable
+     └──────────── failed
+```
 
-The user confirms this digest, never an adapter payload. Business-field or selected-scope changes require a new preview and confirmation: amount, category, merchant, time, name, quantity, specification, line price, refund, product addition/removal, selected scope, or completeness conclusion all change the digest.
+`recognizing` is transient. A successful or partial recognition builds the latest preview and moves to `awaiting_confirmation`. A result with no executable business section becomes `not_actionable`; an unavailable or failed visual result becomes `failed`.
 
-Adapter-only changes do not change the digest and do not reconfirm. They include `piece` conversion, deterministic kg/g/L/ml conversion, expiry null/omission/version adaptation, payload ordering, strict payload normalization, internal handles, adapter versions, and stable call IDs.
+## Image turn
 
-## Preview and confirmation
+The **initial image message** performs recognition and shows the preview but creates **zero business handoffs**. Confirmation language included in the same message does not count. No downstream action is selected on the image turn.
 
-Keep `draft` → `awaiting_confirmation` → `executing` → `consumed`, with a latest-preview-only rule. The initial image turn requires a successful or partial `recognition_run`, creates one unified fact set and one business preview, and makes zero business writes. `Partial` is eligible only when all attachments entered vision and each attachment is `succeeded` or `partial`; any failed attachment or mixed-batch `not_executed` attachment leaves the state at `draft`, creates no digest or confirmation state, and permits no adapter execution. A confirmation word in that image message cannot execute; only a later valid confirmation of the latest `awaiting_confirmation` digest can execute.
+## Later reply
 
-Valid later confirmation may select all executable work, expense only, or diet only. Questions and clarification requests are not confirmation. When a digest business field changes, invalidate the old preview, make the new preview visible, then await its confirmation. Adapter-only corrections retain the original confirmation as described in recovery.
+Only a **later affirmative reply** to the latest preview can select content:
 
-Before a first selected business write, atomically move the confirmed preview to `executing`; after all selected attempts and required status queries finish, move it to `consumed`. A repeated confirmation of `executing` or `consumed` returns the safe known receipt/state and makes zero new writes.
+- `确认`, `可以`, `没问题`, `执行`, or `就这样` selects all executable sections.
+- `只记账` selects accounting only.
+- `只入库` selects inventory only.
 
-## Independent execution
+Questions, clarification requests, and corrections are not confirmations. A correction must **invalidate the prior preview**, apply the correction to the canonical facts, create a new preview ID, display the replacement preview, and return to `awaiting_confirmation`.
 
-Execute the selected expense scope and each eligible pantry item independently with only their public payloads. Do not run a non-executable domain. A failure in one domain or one pantry item never authorizes replay of a written expense or written sibling. The consumed preview stores safe execution outcomes for duplicate confirmations.
+After a valid selection, hand the confirmed content back once and enter `handed_off`. Repeated confirmation after `handed_off` creates **zero new handoffs** and only reports that the latest confirmed preview was already handed back.
+
+**OpenClaw owns downstream Skill invocation.** The router never chooses, calls, monitors, repairs, or retries downstream Skills itself.
