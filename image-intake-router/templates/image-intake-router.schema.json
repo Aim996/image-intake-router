@@ -212,6 +212,23 @@
           }
         },
         {
+          "if": {
+            "properties": {
+              "status": { "const": "partial" },
+              "refinement": { "properties": { "status": { "const": "not_needed" } }, "required": ["status"] }
+            },
+            "required": ["status", "refinement"]
+          },
+          "then": {
+            "properties": {
+              "attachments": {
+                "contains": { "properties": { "status": { "const": "partial" } }, "required": ["status"] },
+                "minContains": 1
+              }
+            }
+          }
+        },
+        {
           "if": { "properties": { "refinement": { "properties": { "status": { "enum": ["succeeded", "partial", "failed"] } }, "required": ["status"] } }, "required": ["refinement"] },
           "then": {
             "properties": {
@@ -220,8 +237,7 @@
                 "properties": {
                   "reasons": { "minItems": 1 },
                   "targeted_fields": { "minItems": 1 },
-                  "attachment_indexes": { "minItems": 1 },
-                  "issues": { "minItems": 1 }
+                  "attachment_indexes": { "minItems": 1 }
                 }
               }
             }

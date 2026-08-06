@@ -296,7 +296,6 @@ class RouterV3FixtureSchemaTests(unittest.TestCase):
                 self.assertGreater(len(refinement["reasons"]), 0)
                 self.assertGreater(len(refinement["targeted_fields"]), 0)
                 self.assertGreater(len(refinement["attachment_indexes"]), 0)
-                self.assertGreater(len(refinement["issues"]), 0)
                 self.assert_schema_valid(record)
 
                 for pass_count in [0, 1]:
@@ -304,7 +303,7 @@ class RouterV3FixtureSchemaTests(unittest.TestCase):
                         invalid = copy.deepcopy(record)
                         invalid["recognition_run"]["pass_count"] = pass_count
                         self.assert_schema_invalid(invalid)
-                for field in ["reasons", "targeted_fields", "attachment_indexes", "issues"]:
+                for field in ["reasons", "targeted_fields", "attachment_indexes"]:
                     with self.subTest(refinement_status=refinement_status, empty=field):
                         invalid = copy.deepcopy(record)
                         invalid["recognition_run"]["refinement"][field] = []
@@ -315,6 +314,24 @@ class RouterV3FixtureSchemaTests(unittest.TestCase):
         aggregate_failed["recognition_run"]["pass_count"] = 2
         aggregate_failed["recognition_run"]["refinement"]["status"] = "failed"
         self.assert_schema_invalid(aggregate_failed)
+
+    def test_partial_without_refinement_requires_a_partial_attachment(self) -> None:
+        record = self.fixture("partial-nine-item-order.v3.json")
+        run = record["recognition_run"]
+        self.assertEqual(run["status"], "partial")
+        self.assertEqual(run["refinement"]["status"], "not_needed")
+        for attachment in run["attachments"]:
+            attachment["status"] = "succeeded"
+            attachment["completeness"] = "complete"
+            attachment["limitations"] = []
+        self.assert_schema_invalid(record)
+
+    def test_refinement_succeeded_allows_empty_issues(self) -> None:
+        record = self.fixture("durian-order.v3.json")
+        refinement = record["recognition_run"]["refinement"]
+        self.assertEqual(refinement["status"], "succeeded")
+        refinement["issues"] = []
+        self.assert_schema_valid(record)
 
     def test_initial_preview_has_no_handoff_and_handed_off_is_singular(self) -> None:
         for name, recognition_status in [
