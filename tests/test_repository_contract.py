@@ -249,6 +249,21 @@ class RepositoryContractTests(unittest.TestCase):
         for path in ["项目说明.md", "后续迭代计划.md", "约束文档.md"]:
             self.assertTrue((ROOT / path).is_file(), path)
 
+    def test_v2_1_rollback_assets_are_explicit_in_user_recovery_docs(self) -> None:
+        readme = self.read("README.md")
+        install = self.read("docs/INSTALL.md")
+        upgrading = self.read("docs/UPGRADING.md")
+        rollback_tag = "https://github.com/Aim996/image-intake-router/releases/tag/v2.1.0"
+        assets = ["image-intake-router-2.1.0.tgz", "image-intake-router-2.1.0.tgz.sha256"]
+
+        self.assertIn(rollback_tag, readme)
+        self.assertIn("rollback", readme.lower())
+        for asset in assets:
+            self.assertIn(asset, readme)
+            self.assertIn(asset, install)
+        for phrase in ["2.1.0", "回滚", "恢复"]:
+            self.assertIn(phrase, upgrading)
+
     def test_install_docs_name_exact_assets_platforms_and_layout(self) -> None:
         readme = self.read("README.md")
         install = self.read("docs/INSTALL.md")

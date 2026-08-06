@@ -96,6 +96,15 @@ class ProductContractTests(unittest.TestCase):
         ]:
             self.assertIn(phrase, rules)
 
+    def test_recognition_rules_never_treat_attachment_metadata_as_facts(self) -> None:
+        runtime = self.read(REFERENCES / "vision-runtime.md")
+        for phrase in [
+            "Attachment filenames",
+            "description text",
+            "cannot establish image business facts",
+        ]:
+            self.assertIn(phrase, runtime)
+
     def test_skill_references_only_existing_local_files(self) -> None:
         content = self.read(SKILL)
         targets = set(re.findall(r"\]\((references/[^)]+\.md)\)", content))
@@ -122,21 +131,66 @@ class RouterV3ProtocolContractTests(unittest.TestCase):
         )
         self.assertNotIn("expense_projection", schema["properties"])
         self.assertNotIn("diet_projection", schema["properties"])
+        self.assertNotIn("handoffs", schema["properties"])
         self.assertIn("accountingContent", schema["$defs"])
         self.assertIn("inventoryContent", schema["$defs"])
         self.assertIn("handoff", schema["$defs"])
 
     def test_recognition_run_caps_targeted_refinement_at_two_passes(self) -> None:
-        run = json.loads(self.read(SCHEMA))["$defs"]["recognitionRun"]
+        defs = json.loads(self.read(SCHEMA))["$defs"]
+        self.assertIn("recognitionRun", defs)
+        self.assertIn("refinementRun", defs)
+        run = defs["recognitionRun"]
         self.assertIn("pass_count", run["properties"])
+        self.assertIn("refinement", run["properties"])
+        self.assertTrue({"pass_count", "refinement"}.issubset(run["required"]))
         self.assertEqual(run["properties"]["pass_count"]["minimum"], 0)
         self.assertEqual(run["properties"]["pass_count"]["maximum"], 2)
-        refinement = json.loads(self.read(SCHEMA))["$defs"]["refinementRun"]
+        refinement = defs["refinementRun"]
+        self.assertTrue(
+            {"status", "reason", "targeted_fields", "attachment_indexes"}.issubset(
+                refinement["required"]
+            )
+        )
         self.assertEqual(
             refinement["properties"]["status"]["enum"],
             ["not_applicable", "not_needed", "succeeded", "partial", "failed"],
         )
         self.assertEqual(refinement["properties"]["attachment_indexes"]["uniqueItems"], True)
+
+    def test_schema_keeps_recognition_and_fact_records_strict_and_evidenced(self) -> None:
+        schema = json.loads(self.read(SCHEMA))
+        self.assertEqual(schema["$schema"], "https://json-schema.org/draft/2020-12/schema")
+        self.assertFalse(schema["additionalProperties"])
+        defs = schema["$defs"]
+        for name in ["facts", "textFact", "amountFact", "quantityFact", "itemFact"]:
+            self.assertIn(name, defs)
+            self.assertFalse(defs[name]["additionalProperties"])
+        for name in ["textFact", "amountFact", "quantityFact", "itemFact"]:
+            fact = defs[name]
+            self.assertIn("evidence", fact["properties"])
+            self.assertTrue(
+                fact["properties"]["evidence"].get("minItems") == 1
+                or any(
+                    guard.get("then", {}).get("properties", {}).get("evidence", {}).get(
+                        "minItems"
+                    )
+                    == 1
+                    for guard in fact.get("allOf", [])
+                ),
+                f"{name} must require evidence for a known value",
+            )
+
+    def test_schema_preserves_exact_attachment_coverage_constraints(self) -> None:
+        recognition = json.loads(self.read(SCHEMA))["$defs"]["recognitionRun"]
+        self.assertTrue(
+            {"attachment_count", "processed_attachment_count", "attachments"}.issubset(
+                recognition["required"]
+            )
+        )
+        attachment = json.loads(self.read(SCHEMA))["$defs"]["recognitionAttachment"]
+        self.assertTrue({"attachment_index", "status"}.issubset(attachment["required"]))
+        self.assertEqual(attachment["properties"]["attachment_index"]["minimum"], 0)
 
 
 if __name__ == "__main__":

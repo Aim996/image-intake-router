@@ -1,3 +1,4 @@
+import copy
 import json
 import unittest
 from pathlib import Path
@@ -45,12 +46,59 @@ class RouterV3FixtureSchemaTests(unittest.TestCase):
         messages = self.validation_messages(instance)
         self.assertEqual(messages, [], "\n".join(messages))
 
+    def assert_schema_invalid(self, instance: object) -> None:
+        self.assertNotEqual(self.validation_messages(instance), [])
+
+    def assert_runtime_attachment_invariants(self, record: dict) -> None:
+        run = record["recognition_run"]
+        attachments = run["attachments"]
+        self.assertEqual(record["source"]["image_count"], run["attachment_count"])
+        self.assertEqual(run["attachment_count"], len(attachments))
+        self.assertEqual(
+            [row["attachment_index"] for row in attachments],
+            list(range(len(attachments))),
+        )
+        self.assertEqual(
+            run["processed_attachment_count"],
+            sum(row["status"] != "not_executed" for row in attachments),
+        )
+
     def test_every_shipped_v3_fixture_is_a_complete_draft_2020_12_instance(self) -> None:
         fixtures = sorted(FIXTURES.glob("*.v3.json"))
         self.assertGreater(len(fixtures), 0)
         for path in fixtures:
             with self.subTest(fixture=path.name):
                 self.assert_schema_valid(json.loads(path.read_text(encoding="utf-8")))
+
+    def test_v3_fixtures_preserve_exact_attachment_coverage_and_count(self) -> None:
+        for name in [
+            "durian-order.v3.json",
+            "partial-nine-item-order.v3.json",
+            "failed-recognition.v3.json",
+        ]:
+            with self.subTest(fixture=name):
+                self.assert_runtime_attachment_invariants(self.fixture(name))
+
+    def test_attachment_coverage_helper_rejects_count_and_index_mismatches(self) -> None:
+        baseline = self.fixture("partial-nine-item-order.v3.json")
+        mutations = {
+            "source image count": lambda record: record["source"].__setitem__("image_count", 2),
+            "attachment count": lambda record: record["recognition_run"].__setitem__(
+                "attachment_count", 2
+            ),
+            "processed count": lambda record: record["recognition_run"].__setitem__(
+                "processed_attachment_count", 2
+            ),
+            "contiguous attachment index": lambda record: record["recognition_run"][
+                "attachments"
+            ][0].__setitem__("attachment_index", 1),
+        }
+        for name, mutate in mutations.items():
+            with self.subTest(mismatch=name):
+                record = copy.deepcopy(baseline)
+                mutate(record)
+                with self.assertRaises(AssertionError):
+                    self.assert_runtime_attachment_invariants(record)
 
     def test_durian_refinement_preserves_visible_detail(self) -> None:
         record = self.fixture("durian-order.v3.json")
@@ -80,6 +128,97 @@ class RouterV3FixtureSchemaTests(unittest.TestCase):
         self.assertIsNone(record["accounting_content"])
         self.assertIsNone(record["inventory_content"])
         self.assertIsNone(record["handoff"])
+
+    def test_failed_and_not_executed_recognition_fail_closed(self) -> None:
+        baseline = self.fixture("failed-recognition.v3.json")
+        for status, pass_count in [("failed", 0), ("not_executed", 0)]:
+            with self.subTest(status=status):
+                record = copy.deepcopy(baseline)
+                record["preview_state"] = "failed"
+                run = record["recognition_run"]
+                run["status"] = status
+                run["pass_count"] = pass_count
+                if status == "not_executed":
+                    run["processed_attachment_count"] = 0
+                    for attachment in run["attachments"]:
+                        attachment["status"] = "not_executed"
+                        attachment["completeness"] = "unavailable"
+                refinement = run["refinement"]
+                refinement["status"] = "not_applicable"
+                self.assert_schema_valid(record)
+                self.assertFalse(refinement["reason"])
+                self.assertEqual(refinement["targeted_fields"], [])
+                self.assertEqual(refinement["attachment_indexes"], [])
+                self.assertIsNone(record["cleaned_text"])
+                self.assertIsNone(record["accounting_content"])
+                self.assertIsNone(record["inventory_content"])
+                self.assertIsNone(record["handoff"])
+
+    def test_refinement_statuses_enforce_valid_pass_count_combinations(self) -> None:
+        failed_initial = self.fixture("failed-recognition.v3.json")
+        for pass_count in [0, 1]:
+            with self.subTest(initial_failure_pass_count=pass_count):
+                record = copy.deepcopy(failed_initial)
+                run = record["recognition_run"]
+                run["status"] = "failed"
+                run["pass_count"] = pass_count
+                refinement = run["refinement"]
+                refinement["status"] = "not_applicable"
+                self.assert_schema_valid(record)
+                self.assertFalse(refinement["reason"])
+                self.assertEqual(refinement["targeted_fields"], [])
+                self.assertEqual(refinement["attachment_indexes"], [])
+
+        not_needed = self.fixture("partial-nine-item-order.v3.json")
+        run = not_needed["recognition_run"]
+        self.assertEqual(run["pass_count"], 1)
+        self.assertEqual(run["refinement"]["status"], "not_needed")
+        self.assertFalse(run["refinement"]["reason"])
+        self.assertEqual(run["refinement"]["targeted_fields"], [])
+        self.assertEqual(run["refinement"]["attachment_indexes"], [])
+        self.assert_schema_valid(not_needed)
+
+        succeeded = self.fixture("durian-order.v3.json")
+        for refinement_status, aggregate_status in [
+            ("succeeded", "succeeded"),
+            ("partial", "partial"),
+            ("failed", "partial"),
+        ]:
+            with self.subTest(refinement_status=refinement_status):
+                record = copy.deepcopy(succeeded)
+                run = record["recognition_run"]
+                run["status"] = aggregate_status
+                run["pass_count"] = 2
+                refinement = run["refinement"]
+                refinement["status"] = refinement_status
+                self.assertGreater(len(refinement["reason"]), 0)
+                self.assertGreater(len(refinement["targeted_fields"]), 0)
+                self.assertGreater(len(refinement["attachment_indexes"]), 0)
+                self.assert_schema_valid(record)
+
+    def test_initial_preview_has_no_handoff_and_handed_off_is_singular(self) -> None:
+        for name, recognition_status in [
+            ("durian-order.v3.json", "succeeded"),
+            ("partial-nine-item-order.v3.json", "partial"),
+        ]:
+            with self.subTest(fixture=name):
+                record = self.fixture(name)
+                self.assertEqual(record["recognition_run"]["status"], recognition_status)
+                self.assertEqual(record["preview_state"], "awaiting_confirmation")
+                self.assertIsNone(record["handoff"])
+
+        handed_off = self.fixture("handed-off.v3.json")
+        self.assertEqual(handed_off["preview_state"], "handed_off")
+        self.assertIsNotNone(handed_off["handoff"])
+        self.assert_schema_valid(handed_off)
+
+        corrected_preview = copy.deepcopy(handed_off)
+        corrected_preview["preview_state"] = "awaiting_confirmation"
+        self.assert_schema_invalid(corrected_preview)
+
+        duplicate_handoff = copy.deepcopy(handed_off)
+        duplicate_handoff["handoffs"] = [handed_off["handoff"], handed_off["handoff"]]
+        self.assert_schema_invalid(duplicate_handoff)
 
 
 if __name__ == "__main__":
