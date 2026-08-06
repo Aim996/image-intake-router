@@ -87,3 +87,10 @@ Each evaluation used a fresh, read-only evaluator. The evaluator received only t
 
     Finally, the lifecycle requires atomically moving the confirmed preview from `awaiting_confirmation` to `executing`, then to `consumed`; a repeated confirmation in either `executing` or `consumed` returns the known receipt/state and makes zero new writes. The session-local operation ledger further prohibits replay of written operations.
 - Observed gap: No visible-only or duplicate-confirmation gap was observed; P04 passes under the current direct downstream-execution model, which is outside P04’s stated success criterion.
+
+| Scenario | v2.1 baseline | v3 result |
+| --- | --- | --- |
+| P01 | No targeted refinement | One targeted refinement, complete visible facts |
+| P02 | One/two-sentence default | Detailed three-section preview |
+| P03 | Router-owned downstream adapters | OpenClaw-only handoff |
+| P04 | Adapter execution lifecycle | Reliable visible-only one-time handoff |
