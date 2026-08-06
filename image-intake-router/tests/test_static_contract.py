@@ -49,19 +49,27 @@ class ProductContractTests(unittest.TestCase):
         ]:
             self.assertIn(phrase, skill)
 
-    def test_output_contract_lists_detailed_business_sections(self) -> None:
+    def test_output_contract_renders_compact_actionable_business_sections(self) -> None:
         content = self.read(REFERENCES / "output-contract.md")
         for phrase in [
-            "【入账内容】",
-            "【入库内容】",
-            "【需要注意】",
+            "【入账】",
+            "【入库】",
+            "【需确认】",
             "list every visible recognized product",
             "name, quantity, specification or weight, and line paid amount",
-            "请核实以上内容，回复“确认”后执行。",
+            "以上 N 种食品均入库",
+            "生产日期",
+            "回复“确认”执行；也可回复“只记账”或“只入库”",
+            "Omit the entire production-date block",
+            "actionable",
         ]:
             self.assertIn(phrase, content)
-        self.assertNotIn("one or two business sentences", content)
-        self.assertNotIn("full details only on request", content)
+        for forbidden in [
+            "Show merchant, transaction time, final paid amount, refunds",
+            "weight variance, status, and other useful",
+            "repeat every accounting row",
+        ]:
+            self.assertNotIn(forbidden, content)
 
     def test_confirmation_hands_off_once_and_never_executes_downstream_itself(self) -> None:
         content = self.read(REFERENCES / "confirmation-and-execution.md")
@@ -86,12 +94,15 @@ class ProductContractTests(unittest.TestCase):
             "never exceeds 2",
             "targeted refinement",
             "visible-field omission",
+            "production_date",
         ]:
             self.assertIn(phrase, runtime)
         for phrase in [
             "约 2.1kg",
-            "重量误差 228g",
-            "自动退款 ¥12.92",
+            "display_name",
+            "production_date",
+            "partial refund",
+            "fully refunded",
             "does not trigger refinement",
         ]:
             self.assertIn(phrase, rules)
@@ -114,13 +125,16 @@ class ProductContractTests(unittest.TestCase):
             self.assertFalse((REFERENCES / removed).exists(), removed)
 
 
-class RouterV3ProtocolContractTests(unittest.TestCase):
+class RouterV31ProtocolContractTests(unittest.TestCase):
     def read(self, path: Path) -> str:
         return path.read_text(encoding="utf-8").replace("\r\n", "\n")
 
     def test_schema_exposes_only_recognition_preview_and_handoff(self) -> None:
         schema = json.loads(self.read(SCHEMA))
-        self.assertEqual(schema["properties"]["schema_version"]["const"], "image-intake-router.v3")
+        self.assertEqual(
+            schema["properties"]["schema_version"]["const"],
+            "image-intake-router.v3.1",
+        )
         self.assertEqual(
             set(schema["required"]),
             {
@@ -135,6 +149,41 @@ class RouterV3ProtocolContractTests(unittest.TestCase):
         self.assertIn("accountingContent", schema["$defs"])
         self.assertIn("inventoryContent", schema["$defs"])
         self.assertIn("handoff", schema["$defs"])
+
+    def test_schema_uses_concise_names_and_excludes_nonbusiness_amounts(self) -> None:
+        defs = json.loads(self.read(SCHEMA))["$defs"]
+        product = defs["productFacts"]
+        self.assertIn("display_name", product["required"])
+        self.assertIn("full_name", product["required"])
+        for removed in [
+            "normalized_name",
+            "original_amount",
+            "unit_price",
+            "refund_amount",
+            "weight_variance",
+        ]:
+            self.assertNotIn(removed, product["properties"])
+
+        order = defs["orderFacts"]
+        for removed in [
+            "goods_subtotal",
+            "activity_discount",
+            "coupon_discount",
+            "packaging_fee",
+            "delivery_fee",
+            "refund_total",
+        ]:
+            self.assertNotIn(removed, order["properties"])
+
+        accounting_item = defs["accountingItem"]
+        self.assertIn("display_name", accounting_item["required"])
+        for removed in ["full_name", "refund_amount", "weight_variance"]:
+            self.assertNotIn(removed, accounting_item["properties"])
+
+        inventory_item = defs["inventoryItem"]
+        self.assertIn("display_name", inventory_item["required"])
+        self.assertIn("production_date", inventory_item["properties"])
+        self.assertNotIn("food_name", inventory_item["properties"])
 
     def test_recognition_run_caps_targeted_refinement_at_two_passes(self) -> None:
         defs = json.loads(self.read(SCHEMA))["$defs"]

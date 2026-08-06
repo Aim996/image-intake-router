@@ -11,7 +11,7 @@ SCHEMA_PATH = SKILL_ROOT / "templates" / "image-intake-router.schema.json"
 FIXTURES = Path(__file__).resolve().parent / "fixtures"
 
 
-class RouterV3FixtureSchemaTests(unittest.TestCase):
+class RouterV31FixtureSchemaTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         cls.schema = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
@@ -115,7 +115,11 @@ class RouterV3FixtureSchemaTests(unittest.TestCase):
             for item in content["items"]:
                 product = products[item["product_index"]]
                 if scope == "accounting":
-                    self.assertEqual(item["full_name"], product["full_name"]["value"])
+                    self.assertIn("display_name", item)
+                    self.assertIn("display_name", product)
+                    self.assertEqual(
+                        item["display_name"], product["display_name"]["value"]
+                    )
                     self.assertEqual(item["specification"], product["specification"]["value"])
                     self.assertEqual(item["quantity"], product["purchase_quantity"]["value"])
                     self.assertEqual(item["quantity_unit"], product["quantity_unit"]["value"])
@@ -128,15 +132,14 @@ class RouterV3FixtureSchemaTests(unittest.TestCase):
                         self.fact_measurement(product["actual_weight_or_volume"]),
                     )
                     self.assertEqual(
-                        item["weight_variance"],
-                        self.fact_measurement(product["weight_variance"]),
-                    )
-                    self.assertEqual(
                         item["line_paid_amount"], product["line_paid_amount"]["value"]
                     )
-                    self.assertEqual(item["refund_amount"], product["refund_amount"]["value"])
                 else:
-                    self.assertEqual(item["food_name"], product["full_name"]["value"])
+                    self.assertIn("display_name", item)
+                    self.assertIn("display_name", product)
+                    self.assertEqual(
+                        item["display_name"], product["display_name"]["value"]
+                    )
                     self.assertEqual(item["specification"], product["specification"]["value"])
                     self.assertEqual(item["quantity"], product["purchase_quantity"]["value"])
                     self.assertEqual(item["quantity_unit"], product["quantity_unit"]["value"])
@@ -150,8 +153,32 @@ class RouterV3FixtureSchemaTests(unittest.TestCase):
                         item["production_date"], product["production_date"]["value"]
                     )
 
-    def test_every_shipped_v3_fixture_is_a_complete_draft_2020_12_instance(self) -> None:
-        fixtures = sorted(FIXTURES.glob("*.v3.json"))
+    def test_v31_schema_excludes_nonbusiness_fields_from_persisted_records(self) -> None:
+        self.assertEqual(
+            self.schema["properties"]["schema_version"]["const"],
+            "image-intake-router.v3.1",
+        )
+        forbidden = {
+            "refund_total",
+            "refund_amount",
+            "original_amount",
+            "unit_price",
+            "activity_discount",
+            "coupon_discount",
+            "packaging_fee",
+            "delivery_fee",
+            "weight_variance",
+        }
+        defs = self.schema["$defs"]
+        for definition in ["orderFacts", "productFacts", "accountingItem", "inventoryItem"]:
+            with self.subTest(definition=definition):
+                self.assertTrue(
+                    forbidden.isdisjoint(defs[definition]["properties"]),
+                    forbidden.intersection(defs[definition]["properties"]),
+                )
+
+    def test_every_shipped_v31_fixture_is_a_complete_draft_2020_12_instance(self) -> None:
+        fixtures = sorted(FIXTURES.glob("*.v3.1.json"))
         self.assertGreater(len(fixtures), 0)
         for path in fixtures:
             with self.subTest(fixture=path.name):
@@ -189,16 +216,78 @@ class RouterV3FixtureSchemaTests(unittest.TestCase):
                     self.assert_runtime_attachment_invariants(record)
 
     def test_durian_refinement_preserves_visible_detail(self) -> None:
-        record = self.fixture("durian-order.v3.json")
+        record = self.fixture("durian-order.v3.1.json")
         self.assertEqual(record["recognition_run"]["pass_count"], 2)
         self.assertEqual(record["recognition_run"]["refinement"]["status"], "succeeded")
         item = record["accounting_content"]["items"][0]
-        self.assertEqual(item["full_name"], "金枕榴莲")
+        self.assertEqual(item["display_name"], "榴莲")
         self.assertEqual(item["nominal_weight_or_volume"], {"value": 2.1, "unit": "kg"})
         self.assertEqual(item["quantity"], 1)
         self.assertEqual(item["line_paid_amount"], 119.00)
-        self.assertEqual(item["refund_amount"], 12.92)
-        self.assertIn("重量误差 228g", record["cleaned_text"])
+        self.assertNotIn("refund_amount", item)
+        self.assertNotIn("退款", record["cleaned_text"])
+        self.assertNotIn("短重", record["cleaned_text"])
+
+    def test_compact_nine_item_preview_uses_concise_names_dates_and_actual_amounts(self) -> None:
+        record = self.fixture("compact-nine-item-order.v3.1.json")
+        self.assert_schema_valid(record)
+        self.assertEqual(record["accounting_content"]["final_paid_amount"], 65.48)
+        items = record["accounting_content"]["items"]
+        self.assertEqual(
+            [item["display_name"] for item in items],
+            [
+                "甜玉米",
+                "鲜牛奶",
+                "黄瓜",
+                "西兰花",
+                "豆浆",
+                "生菜",
+                "香蕉",
+                "鲜牛奶",
+                "果蔬汁",
+            ],
+        )
+        self.assertEqual(
+            [item["line_paid_amount"] for item in items],
+            [11.78, 10.90, 4.99, 3.95, 13.00, 4.96, 11.90, 3.00, 0.00],
+        )
+        self.assertNotEqual(items[1]["product_index"], items[7]["product_index"])
+        self.assertEqual(items[1]["specification"], "1.5L")
+        self.assertEqual(items[7]["specification"], "260ml×3瓶")
+        inventory = record["inventory_content"]["items"]
+        self.assertEqual(len(inventory), 9)
+        self.assertEqual(inventory[1]["production_date"], "2026-08-03")
+        self.assertEqual(inventory[7]["production_date"], "2026-08-02")
+        self.assertEqual(inventory[8]["production_date"], "2026-08-01")
+        self.assertEqual(record["warnings"], ["交易时间未显示"])
+
+        forbidden_keys = {
+            "refund_total",
+            "refund_amount",
+            "original_amount",
+            "unit_price",
+            "activity_discount",
+            "coupon_discount",
+            "packaging_fee",
+            "delivery_fee",
+            "weight_variance",
+        }
+
+        def walk(value: object) -> None:
+            if isinstance(value, dict):
+                self.assertTrue(forbidden_keys.isdisjoint(value), forbidden_keys.intersection(value))
+                for child in value.values():
+                    walk(child)
+            elif isinstance(value, list):
+                for child in value:
+                    walk(child)
+
+        walk(record["facts"])
+        walk(record["accounting_content"])
+        walk(record["inventory_content"])
+        rendered = json.dumps(record, ensure_ascii=False)
+        for forbidden_text in ["赠品", "免费", "会员", "原价", "优惠", "退款", "短重"]:
+            self.assertNotIn(forbidden_text, rendered)
 
     def test_hidden_items_warn_without_triggering_refinement(self) -> None:
         record = self.fixture("partial-nine-item-order.v3.json")
