@@ -14,7 +14,7 @@
 - `1` means the initial pass ran and the completeness audit found no eligible visible-field omission.
 - `2` means the initial pass ran and exactly one targeted refinement ran.
 
-After the initial pass, audit returned facts against the visible-field checklist. A targeted refinement is permitted if and only if the audit identifies a `visible-field omission`: a field visibly present in pixels but missing from the returned facts. It may revisit only the attachment regions and fields named by that completeness audit. It must not rescan unrelated attachments or regions, and there is no third pass.
+After the initial pass, audit returned facts against the visible-field checklist. A targeted refinement is permitted if and only if the audit identifies a `visible-field omission`: a field visibly present in pixels but missing from the returned facts. `production_date` is part of this audit: a clear production-date label/value omitted by the first pass may trigger the one targeted refinement, but an absent, hidden, cropped, or unreadable date may not. It may revisit only the attachment regions and fields named by that completeness audit. It must not rescan unrelated attachments or regions, and there is no third pass.
 
 ## Pixel evidence and fail-closed behavior
 
