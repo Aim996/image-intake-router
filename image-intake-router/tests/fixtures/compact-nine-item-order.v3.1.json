@@ -1,46 +1,53 @@
 {
-  "schema_version": "image-intake-router.v3",
-  "preview_id": "preview:partial-nine:20260805:001",
+  "schema_version": "image-intake-router.v3.1",
+  "preview_id": "preview:compact-nine:20260807:001",
   "preview_state": "awaiting_confirmation",
   "source": {
     "image_count": 1,
     "has_user_text": false
   },
   "recognition_run": {
-    "status": "partial",
+    "status": "succeeded",
     "method": "native_vision",
     "attachment_count": 1,
     "processed_attachment_count": 1,
     "attachments": [
       {
         "attachment_index": 0,
-        "status": "partial",
-        "completeness": "partial",
-        "limitations": [
-          "two item kinds are collapsed"
-        ]
+        "status": "succeeded",
+        "completeness": "complete",
+        "limitations": []
       }
     ],
-    "issues": [
-      "two item kinds are not expanded"
-    ],
-    "pass_count": 1,
+    "issues": [],
+    "pass_count": 2,
     "refinement": {
-      "status": "not_needed",
-      "reasons": [],
-      "targeted_fields": [],
-      "attachment_indexes": [],
+      "status": "succeeded",
+      "reasons": [
+        "visible production dates omitted on initial pass"
+      ],
+      "targeted_fields": [
+        "production_date"
+      ],
+      "attachment_indexes": [
+        0
+      ],
       "issues": []
     }
   },
-  "cleaned_text": "\u8bc6\u522b\u5230 7 \u79cd\u5df2\u5c55\u5f00\u5546\u54c1\uff1b\u53e6\u6709 2 \u79cd\u5546\u54c1\u672a\u5c55\u5f00\u3002\u5b9e\u4ed8\u00a565.48\u3002",
+  "cleaned_text": "小象超市，实付 ¥65.48，共9种已收食品；商品名称、规格、数量、行实付和可见生产日期已整理。",
   "facts": {
     "order": {
       "merchant": {
-        "value": null,
-        "confidence": 0,
+        "value": "小象超市",
+        "confidence": 0.98,
         "calculated": false,
-        "evidence": []
+        "evidence": [
+          {
+            "source": "visible_label",
+            "value": "小象超市"
+          }
+        ]
       },
       "transaction_time": {
         "value": null,
@@ -49,40 +56,15 @@
         "evidence": []
       },
       "order_status": {
-        "value": null,
-        "confidence": 0,
+        "value": "purchased_and_received",
+        "confidence": 0.98,
         "calculated": false,
-        "evidence": []
-      },
-      "goods_subtotal": {
-        "value": null,
-        "confidence": 0,
-        "calculated": false,
-        "evidence": []
-      },
-      "activity_discount": {
-        "value": null,
-        "confidence": 0,
-        "calculated": false,
-        "evidence": []
-      },
-      "coupon_discount": {
-        "value": null,
-        "confidence": 0,
-        "calculated": false,
-        "evidence": []
-      },
-      "packaging_fee": {
-        "value": null,
-        "confidence": 0,
-        "calculated": false,
-        "evidence": []
-      },
-      "delivery_fee": {
-        "value": null,
-        "confidence": 0,
-        "calculated": false,
-        "evidence": []
+        "evidence": [
+          {
+            "source": "visible_label",
+            "value": "已收货"
+          }
+        ]
       },
       "final_paid_amount": {
         "value": 65.48,
@@ -96,12 +78,6 @@
           }
         ]
       },
-      "refund_total": {
-        "value": null,
-        "confidence": 0,
-        "calculated": false,
-        "evidence": []
-      },
       "declared_item_kind_count": {
         "value": 9,
         "confidence": 0.98,
@@ -114,39 +90,28 @@
         ]
       },
       "recognized_item_kind_count": {
-        "value": 7,
+        "value": 9,
         "confidence": 1,
         "calculated": true,
         "evidence": [
           {
             "source": "calculated",
-            "value": "7"
+            "value": "9"
           }
         ]
       },
       "hidden_item_kind_count": {
-        "value": 2,
+        "value": 0,
         "confidence": 1,
         "calculated": true,
         "evidence": [
           {
             "source": "calculated",
-            "value": "2"
+            "value": "0"
           }
         ]
       },
       "has_unexpanded_items": {
-        "value": true,
-        "confidence": 1,
-        "calculated": true,
-        "evidence": [
-          {
-            "source": "calculated",
-            "value": "true"
-          }
-        ]
-      },
-      "content_complete": {
         "value": false,
         "confidence": 1,
         "calculated": true,
@@ -156,40 +121,52 @@
             "value": "false"
           }
         ]
+      },
+      "content_complete": {
+        "value": true,
+        "confidence": 1,
+        "calculated": true,
+        "evidence": [
+          {
+            "source": "calculated",
+            "value": "true"
+          }
+        ]
       }
     },
     "products": [
       {
         "full_name": {
-          "value": "\u751c\u7389\u7c73",
+          "value": "甜玉米",
           "confidence": 0.98,
           "calculated": false,
           "evidence": [
             {
               "source": "visible_label",
-              "value": "\u751c\u7389\u7c73"
+              "value": "甜玉米"
             }
           ]
         },
-        "normalized_name": {
-          "value": "\u751c\u7389\u7c73",
-          "confidence": 0.98,
-          "calculated": false,
+        "display_name": {
+          "value": "甜玉米",
+          "confidence": 0.96,
+          "calculated": true,
           "evidence": [
             {
-              "source": "visible_label",
-              "value": "\u751c\u7389\u7c73"
+              "source": "calculated",
+              "value": "甜玉米",
+              "reason": "Simplified from visible full name: 甜玉米"
             }
           ]
         },
         "specification": {
-          "value": "\u7ea6850 g \u00d7 2",
+          "value": "约850g",
           "confidence": 0.98,
           "calculated": false,
           "evidence": [
             {
               "source": "visible_label",
-              "value": "\u7ea6850 g \u00d7 2"
+              "value": "约850g"
             }
           ]
         },
@@ -237,27 +214,6 @@
           "calculated": false,
           "evidence": []
         },
-        "weight_variance": {
-          "value": null,
-          "unit": null,
-          "confidence": 0,
-          "calculated": false,
-          "evidence": []
-        },
-        "original_amount": {
-          "value": null,
-          "currency": null,
-          "confidence": 0,
-          "calculated": false,
-          "evidence": []
-        },
-        "unit_price": {
-          "value": null,
-          "currency": null,
-          "confidence": 0,
-          "calculated": false,
-          "evidence": []
-        },
         "line_paid_amount": {
           "value": 11.78,
           "currency": "CNY",
@@ -269,13 +225,6 @@
               "value": "11.78"
             }
           ]
-        },
-        "refund_amount": {
-          "value": null,
-          "currency": null,
-          "confidence": 0,
-          "calculated": false,
-          "evidence": []
         },
         "production_date": {
           "value": null,
@@ -290,7 +239,7 @@
           "evidence": [
             {
               "source": "visible_label",
-              "value": "purchased_and_received"
+              "value": "已收货"
             }
           ]
         },
@@ -301,7 +250,7 @@
           "evidence": [
             {
               "source": "visible_label",
-              "value": "food"
+              "value": "甜玉米"
             }
           ]
         },
@@ -312,42 +261,43 @@
           "evidence": [
             {
               "source": "visible_label",
-              "value": "visible"
+              "value": "商品明细"
             }
           ]
         }
       },
       {
         "full_name": {
-          "value": "\u9c9c\u725b\u5976",
+          "value": "小象3.4g蛋白鲜牛奶",
           "confidence": 0.98,
           "calculated": false,
           "evidence": [
             {
               "source": "visible_label",
-              "value": "\u9c9c\u725b\u5976"
+              "value": "小象3.4g蛋白鲜牛奶"
             }
           ]
         },
-        "normalized_name": {
-          "value": "\u9c9c\u725b\u5976",
-          "confidence": 0.98,
-          "calculated": false,
+        "display_name": {
+          "value": "鲜牛奶",
+          "confidence": 0.96,
+          "calculated": true,
           "evidence": [
             {
-              "source": "visible_label",
-              "value": "\u9c9c\u725b\u5976"
+              "source": "calculated",
+              "value": "鲜牛奶",
+              "reason": "Simplified from visible full name: 小象3.4g蛋白鲜牛奶"
             }
           ]
         },
         "specification": {
-          "value": "1.5 L \u00d7 1",
+          "value": "1.5L",
           "confidence": 0.98,
           "calculated": false,
           "evidence": [
             {
               "source": "visible_label",
-              "value": "1.5 L \u00d7 1"
+              "value": "1.5L"
             }
           ]
         },
@@ -395,27 +345,6 @@
           "calculated": false,
           "evidence": []
         },
-        "weight_variance": {
-          "value": null,
-          "unit": null,
-          "confidence": 0,
-          "calculated": false,
-          "evidence": []
-        },
-        "original_amount": {
-          "value": null,
-          "currency": null,
-          "confidence": 0,
-          "calculated": false,
-          "evidence": []
-        },
-        "unit_price": {
-          "value": null,
-          "currency": null,
-          "confidence": 0,
-          "calculated": false,
-          "evidence": []
-        },
         "line_paid_amount": {
           "value": 10.9,
           "currency": "CNY",
@@ -424,22 +353,20 @@
           "evidence": [
             {
               "source": "visible_label",
-              "value": "10.9"
+              "value": "10.90"
             }
           ]
         },
-        "refund_amount": {
-          "value": null,
-          "currency": null,
-          "confidence": 0,
-          "calculated": false,
-          "evidence": []
-        },
         "production_date": {
-          "value": null,
-          "confidence": 0,
+          "value": "2026-08-03",
+          "confidence": 0.98,
           "calculated": false,
-          "evidence": []
+          "evidence": [
+            {
+              "source": "visible_label",
+              "value": "2026-08-03"
+            }
+          ]
         },
         "line_status": {
           "value": "purchased_and_received",
@@ -448,7 +375,7 @@
           "evidence": [
             {
               "source": "visible_label",
-              "value": "purchased_and_received"
+              "value": "已收货"
             }
           ]
         },
@@ -459,7 +386,7 @@
           "evidence": [
             {
               "source": "visible_label",
-              "value": "food"
+              "value": "鲜牛奶"
             }
           ]
         },
@@ -470,42 +397,43 @@
           "evidence": [
             {
               "source": "visible_label",
-              "value": "visible"
+              "value": "商品明细"
             }
           ]
         }
       },
       {
         "full_name": {
-          "value": "\u9ec4\u74dc",
+          "value": "黄瓜",
           "confidence": 0.98,
           "calculated": false,
           "evidence": [
             {
               "source": "visible_label",
-              "value": "\u9ec4\u74dc"
+              "value": "黄瓜"
             }
           ]
         },
-        "normalized_name": {
-          "value": "\u9ec4\u74dc",
-          "confidence": 0.98,
-          "calculated": false,
+        "display_name": {
+          "value": "黄瓜",
+          "confidence": 0.96,
+          "calculated": true,
           "evidence": [
             {
-              "source": "visible_label",
-              "value": "\u9ec4\u74dc"
+              "source": "calculated",
+              "value": "黄瓜",
+              "reason": "Simplified from visible full name: 黄瓜"
             }
           ]
         },
         "specification": {
-          "value": "\u7ea6700 g \u00d7 1",
+          "value": "约700g",
           "confidence": 0.98,
           "calculated": false,
           "evidence": [
             {
               "source": "visible_label",
-              "value": "\u7ea6700 g \u00d7 1"
+              "value": "约700g"
             }
           ]
         },
@@ -553,27 +481,6 @@
           "calculated": false,
           "evidence": []
         },
-        "weight_variance": {
-          "value": null,
-          "unit": null,
-          "confidence": 0,
-          "calculated": false,
-          "evidence": []
-        },
-        "original_amount": {
-          "value": null,
-          "currency": null,
-          "confidence": 0,
-          "calculated": false,
-          "evidence": []
-        },
-        "unit_price": {
-          "value": null,
-          "currency": null,
-          "confidence": 0,
-          "calculated": false,
-          "evidence": []
-        },
         "line_paid_amount": {
           "value": 4.99,
           "currency": "CNY",
@@ -585,13 +492,6 @@
               "value": "4.99"
             }
           ]
-        },
-        "refund_amount": {
-          "value": null,
-          "currency": null,
-          "confidence": 0,
-          "calculated": false,
-          "evidence": []
         },
         "production_date": {
           "value": null,
@@ -606,7 +506,7 @@
           "evidence": [
             {
               "source": "visible_label",
-              "value": "purchased_and_received"
+              "value": "已收货"
             }
           ]
         },
@@ -617,7 +517,7 @@
           "evidence": [
             {
               "source": "visible_label",
-              "value": "food"
+              "value": "黄瓜"
             }
           ]
         },
@@ -628,42 +528,43 @@
           "evidence": [
             {
               "source": "visible_label",
-              "value": "visible"
+              "value": "商品明细"
             }
           ]
         }
       },
       {
         "full_name": {
-          "value": "\u897f\u5170\u82b1",
+          "value": "高原夏菜 西兰花",
           "confidence": 0.98,
           "calculated": false,
           "evidence": [
             {
               "source": "visible_label",
-              "value": "\u897f\u5170\u82b1"
+              "value": "高原夏菜 西兰花"
             }
           ]
         },
-        "normalized_name": {
-          "value": "\u897f\u5170\u82b1",
-          "confidence": 0.98,
-          "calculated": false,
+        "display_name": {
+          "value": "西兰花",
+          "confidence": 0.96,
+          "calculated": true,
           "evidence": [
             {
-              "source": "visible_label",
-              "value": "\u897f\u5170\u82b1"
+              "source": "calculated",
+              "value": "西兰花",
+              "reason": "Simplified from visible full name: 高原夏菜 西兰花"
             }
           ]
         },
         "specification": {
-          "value": "\u7ea6600 g \u00d7 1",
+          "value": "约600g",
           "confidence": 0.98,
           "calculated": false,
           "evidence": [
             {
               "source": "visible_label",
-              "value": "\u7ea6600 g \u00d7 1"
+              "value": "约600g"
             }
           ]
         },
@@ -711,27 +612,6 @@
           "calculated": false,
           "evidence": []
         },
-        "weight_variance": {
-          "value": null,
-          "unit": null,
-          "confidence": 0,
-          "calculated": false,
-          "evidence": []
-        },
-        "original_amount": {
-          "value": null,
-          "currency": null,
-          "confidence": 0,
-          "calculated": false,
-          "evidence": []
-        },
-        "unit_price": {
-          "value": null,
-          "currency": null,
-          "confidence": 0,
-          "calculated": false,
-          "evidence": []
-        },
         "line_paid_amount": {
           "value": 3.95,
           "currency": "CNY",
@@ -743,13 +623,6 @@
               "value": "3.95"
             }
           ]
-        },
-        "refund_amount": {
-          "value": null,
-          "currency": null,
-          "confidence": 0,
-          "calculated": false,
-          "evidence": []
         },
         "production_date": {
           "value": null,
@@ -764,7 +637,7 @@
           "evidence": [
             {
               "source": "visible_label",
-              "value": "purchased_and_received"
+              "value": "已收货"
             }
           ]
         },
@@ -775,7 +648,7 @@
           "evidence": [
             {
               "source": "visible_label",
-              "value": "food"
+              "value": "西兰花"
             }
           ]
         },
@@ -786,42 +659,43 @@
           "evidence": [
             {
               "source": "visible_label",
-              "value": "visible"
+              "value": "商品明细"
             }
           ]
         }
       },
       {
         "full_name": {
-          "value": "\u8c46\u6d46",
+          "value": "低德吟 小象5.0蛋白质浓豆浆",
           "confidence": 0.98,
           "calculated": false,
           "evidence": [
             {
               "source": "visible_label",
-              "value": "\u8c46\u6d46"
+              "value": "低德吟 小象5.0蛋白质浓豆浆"
             }
           ]
         },
-        "normalized_name": {
-          "value": "\u8c46\u6d46",
-          "confidence": 0.98,
-          "calculated": false,
+        "display_name": {
+          "value": "豆浆",
+          "confidence": 0.96,
+          "calculated": true,
           "evidence": [
             {
-              "source": "visible_label",
-              "value": "\u8c46\u6d46"
+              "source": "calculated",
+              "value": "豆浆",
+              "reason": "Simplified from visible full name: 低德吟 小象5.0蛋白质浓豆浆"
             }
           ]
         },
         "specification": {
-          "value": "1 L \u00d7 2",
+          "value": "1L",
           "confidence": 0.98,
           "calculated": false,
           "evidence": [
             {
               "source": "visible_label",
-              "value": "1 L \u00d7 2"
+              "value": "1L"
             }
           ]
         },
@@ -869,45 +743,17 @@
           "calculated": false,
           "evidence": []
         },
-        "weight_variance": {
-          "value": null,
-          "unit": null,
-          "confidence": 0,
-          "calculated": false,
-          "evidence": []
-        },
-        "original_amount": {
-          "value": null,
-          "currency": null,
-          "confidence": 0,
-          "calculated": false,
-          "evidence": []
-        },
-        "unit_price": {
-          "value": null,
-          "currency": null,
-          "confidence": 0,
-          "calculated": false,
-          "evidence": []
-        },
         "line_paid_amount": {
-          "value": 13.0,
+          "value": 13,
           "currency": "CNY",
           "confidence": 0.98,
           "calculated": false,
           "evidence": [
             {
               "source": "visible_label",
-              "value": "13.0"
+              "value": "13.00"
             }
           ]
-        },
-        "refund_amount": {
-          "value": null,
-          "currency": null,
-          "confidence": 0,
-          "calculated": false,
-          "evidence": []
         },
         "production_date": {
           "value": null,
@@ -922,7 +768,7 @@
           "evidence": [
             {
               "source": "visible_label",
-              "value": "purchased_and_received"
+              "value": "已收货"
             }
           ]
         },
@@ -933,7 +779,7 @@
           "evidence": [
             {
               "source": "visible_label",
-              "value": "food"
+              "value": "豆浆"
             }
           ]
         },
@@ -944,42 +790,43 @@
           "evidence": [
             {
               "source": "visible_label",
-              "value": "visible"
+              "value": "商品明细"
             }
           ]
         }
       },
       {
         "full_name": {
-          "value": "\u4e91\u5357\u751f\u83dc",
+          "value": "控温锁鲜 云南生菜",
           "confidence": 0.98,
           "calculated": false,
           "evidence": [
             {
               "source": "visible_label",
-              "value": "\u4e91\u5357\u751f\u83dc"
+              "value": "控温锁鲜 云南生菜"
             }
           ]
         },
-        "normalized_name": {
-          "value": "\u4e91\u5357\u751f\u83dc",
-          "confidence": 0.98,
-          "calculated": false,
+        "display_name": {
+          "value": "生菜",
+          "confidence": 0.96,
+          "calculated": true,
           "evidence": [
             {
-              "source": "visible_label",
-              "value": "\u4e91\u5357\u751f\u83dc"
+              "source": "calculated",
+              "value": "生菜",
+              "reason": "Simplified from visible full name: 控温锁鲜 云南生菜"
             }
           ]
         },
         "specification": {
-          "value": "\u7ea6500 g \u00d7 1",
+          "value": "约500g",
           "confidence": 0.98,
           "calculated": false,
           "evidence": [
             {
               "source": "visible_label",
-              "value": "\u7ea6500 g \u00d7 1"
+              "value": "约500g"
             }
           ]
         },
@@ -1027,27 +874,6 @@
           "calculated": false,
           "evidence": []
         },
-        "weight_variance": {
-          "value": null,
-          "unit": null,
-          "confidence": 0,
-          "calculated": false,
-          "evidence": []
-        },
-        "original_amount": {
-          "value": null,
-          "currency": null,
-          "confidence": 0,
-          "calculated": false,
-          "evidence": []
-        },
-        "unit_price": {
-          "value": null,
-          "currency": null,
-          "confidence": 0,
-          "calculated": false,
-          "evidence": []
-        },
         "line_paid_amount": {
           "value": 4.96,
           "currency": "CNY",
@@ -1059,13 +885,6 @@
               "value": "4.96"
             }
           ]
-        },
-        "refund_amount": {
-          "value": null,
-          "currency": null,
-          "confidence": 0,
-          "calculated": false,
-          "evidence": []
         },
         "production_date": {
           "value": null,
@@ -1080,7 +899,7 @@
           "evidence": [
             {
               "source": "visible_label",
-              "value": "purchased_and_received"
+              "value": "已收货"
             }
           ]
         },
@@ -1091,7 +910,7 @@
           "evidence": [
             {
               "source": "visible_label",
-              "value": "food"
+              "value": "生菜"
             }
           ]
         },
@@ -1102,42 +921,43 @@
           "evidence": [
             {
               "source": "visible_label",
-              "value": "visible"
+              "value": "商品明细"
             }
           ]
         }
       },
       {
         "full_name": {
-          "value": "\u9999\u8549",
+          "value": "佳农进口香甜蕉",
           "confidence": 0.98,
           "calculated": false,
           "evidence": [
             {
               "source": "visible_label",
-              "value": "\u9999\u8549"
+              "value": "佳农进口香甜蕉"
             }
           ]
         },
-        "normalized_name": {
-          "value": "\u9999\u8549",
-          "confidence": 0.98,
-          "calculated": false,
+        "display_name": {
+          "value": "香蕉",
+          "confidence": 0.96,
+          "calculated": true,
           "evidence": [
             {
-              "source": "visible_label",
-              "value": "\u9999\u8549"
+              "source": "calculated",
+              "value": "香蕉",
+              "reason": "Simplified from visible full name: 佳农进口香甜蕉"
             }
           ]
         },
         "specification": {
-          "value": "\u7ea6800 g \u00d7 1",
+          "value": "约800g",
           "confidence": 0.98,
           "calculated": false,
           "evidence": [
             {
               "source": "visible_label",
-              "value": "\u7ea6800 g \u00d7 1"
+              "value": "约800g"
             }
           ]
         },
@@ -1185,27 +1005,6 @@
           "calculated": false,
           "evidence": []
         },
-        "weight_variance": {
-          "value": null,
-          "unit": null,
-          "confidence": 0,
-          "calculated": false,
-          "evidence": []
-        },
-        "original_amount": {
-          "value": null,
-          "currency": null,
-          "confidence": 0,
-          "calculated": false,
-          "evidence": []
-        },
-        "unit_price": {
-          "value": null,
-          "currency": null,
-          "confidence": 0,
-          "calculated": false,
-          "evidence": []
-        },
         "line_paid_amount": {
           "value": 11.9,
           "currency": "CNY",
@@ -1214,16 +1013,9 @@
           "evidence": [
             {
               "source": "visible_label",
-              "value": "11.9"
+              "value": "11.90"
             }
           ]
-        },
-        "refund_amount": {
-          "value": null,
-          "currency": null,
-          "confidence": 0,
-          "calculated": false,
-          "evidence": []
         },
         "production_date": {
           "value": null,
@@ -1238,7 +1030,7 @@
           "evidence": [
             {
               "source": "visible_label",
-              "value": "purchased_and_received"
+              "value": "已收货"
             }
           ]
         },
@@ -1249,7 +1041,7 @@
           "evidence": [
             {
               "source": "visible_label",
-              "value": "food"
+              "value": "香蕉"
             }
           ]
         },
@@ -1260,23 +1052,303 @@
           "evidence": [
             {
               "source": "visible_label",
-              "value": "visible"
+              "value": "商品明细"
+            }
+          ]
+        }
+      },
+      {
+        "full_name": {
+          "value": "原生高钙小象3.6g乳蛋白鲜牛奶",
+          "confidence": 0.98,
+          "calculated": false,
+          "evidence": [
+            {
+              "source": "visible_label",
+              "value": "原生高钙小象3.6g乳蛋白鲜牛奶"
+            }
+          ]
+        },
+        "display_name": {
+          "value": "鲜牛奶",
+          "confidence": 0.96,
+          "calculated": true,
+          "evidence": [
+            {
+              "source": "calculated",
+              "value": "鲜牛奶",
+              "reason": "Simplified from visible full name: 原生高钙小象3.6g乳蛋白鲜牛奶"
+            }
+          ]
+        },
+        "specification": {
+          "value": "260ml×3瓶",
+          "confidence": 0.98,
+          "calculated": false,
+          "evidence": [
+            {
+              "source": "visible_label",
+              "value": "260ml×3瓶"
+            }
+          ]
+        },
+        "purchase_quantity": {
+          "value": 1,
+          "unit": "组",
+          "confidence": 0.98,
+          "calculated": false,
+          "evidence": [
+            {
+              "source": "visible_label",
+              "value": "1"
+            }
+          ]
+        },
+        "quantity_unit": {
+          "value": "组",
+          "confidence": 0.98,
+          "calculated": false,
+          "evidence": [
+            {
+              "source": "visible_label",
+              "value": "组"
+            }
+          ]
+        },
+        "nominal_weight_or_volume": {
+          "value": null,
+          "unit": null,
+          "confidence": 0,
+          "calculated": false,
+          "evidence": []
+        },
+        "actual_weight_or_volume": {
+          "value": null,
+          "unit": null,
+          "confidence": 0,
+          "calculated": false,
+          "evidence": []
+        },
+        "billing_weight": {
+          "value": null,
+          "unit": null,
+          "confidence": 0,
+          "calculated": false,
+          "evidence": []
+        },
+        "line_paid_amount": {
+          "value": 3,
+          "currency": "CNY",
+          "confidence": 0.98,
+          "calculated": false,
+          "evidence": [
+            {
+              "source": "visible_label",
+              "value": "3.00"
+            }
+          ]
+        },
+        "production_date": {
+          "value": "2026-08-02",
+          "confidence": 0.98,
+          "calculated": false,
+          "evidence": [
+            {
+              "source": "visible_label",
+              "value": "2026-08-02"
+            }
+          ]
+        },
+        "line_status": {
+          "value": "purchased_and_received",
+          "confidence": 0.98,
+          "calculated": false,
+          "evidence": [
+            {
+              "source": "visible_label",
+              "value": "已收货"
+            }
+          ]
+        },
+        "item_type": {
+          "value": "food",
+          "confidence": 0.98,
+          "calculated": false,
+          "evidence": [
+            {
+              "source": "visible_label",
+              "value": "鲜牛奶"
+            }
+          ]
+        },
+        "visibility_status": {
+          "value": "visible",
+          "confidence": 0.98,
+          "calculated": false,
+          "evidence": [
+            {
+              "source": "visible_label",
+              "value": "商品明细"
+            }
+          ]
+        }
+      },
+      {
+        "full_name": {
+          "value": "小象HPP奇亚籽牛油果青瓜液体冷榨复合果蔬汁",
+          "confidence": 0.98,
+          "calculated": false,
+          "evidence": [
+            {
+              "source": "visible_label",
+              "value": "小象HPP奇亚籽牛油果青瓜液体冷榨复合果蔬汁"
+            }
+          ]
+        },
+        "display_name": {
+          "value": "果蔬汁",
+          "confidence": 0.96,
+          "calculated": true,
+          "evidence": [
+            {
+              "source": "calculated",
+              "value": "果蔬汁",
+              "reason": "Simplified from visible full name: 小象HPP奇亚籽牛油果青瓜液体冷榨复合果蔬汁"
+            }
+          ]
+        },
+        "specification": {
+          "value": "300ml",
+          "confidence": 0.98,
+          "calculated": false,
+          "evidence": [
+            {
+              "source": "visible_label",
+              "value": "300ml"
+            }
+          ]
+        },
+        "purchase_quantity": {
+          "value": 1,
+          "unit": "瓶",
+          "confidence": 0.98,
+          "calculated": false,
+          "evidence": [
+            {
+              "source": "visible_label",
+              "value": "1"
+            }
+          ]
+        },
+        "quantity_unit": {
+          "value": "瓶",
+          "confidence": 0.98,
+          "calculated": false,
+          "evidence": [
+            {
+              "source": "visible_label",
+              "value": "瓶"
+            }
+          ]
+        },
+        "nominal_weight_or_volume": {
+          "value": 300,
+          "unit": "ml",
+          "confidence": 0.98,
+          "calculated": false,
+          "evidence": [
+            {
+              "source": "visible_label",
+              "value": "300"
+            }
+          ]
+        },
+        "actual_weight_or_volume": {
+          "value": null,
+          "unit": null,
+          "confidence": 0,
+          "calculated": false,
+          "evidence": []
+        },
+        "billing_weight": {
+          "value": null,
+          "unit": null,
+          "confidence": 0,
+          "calculated": false,
+          "evidence": []
+        },
+        "line_paid_amount": {
+          "value": 0,
+          "currency": "CNY",
+          "confidence": 0.98,
+          "calculated": false,
+          "evidence": [
+            {
+              "source": "visible_label",
+              "value": "0.00"
+            }
+          ]
+        },
+        "production_date": {
+          "value": "2026-08-01",
+          "confidence": 0.98,
+          "calculated": false,
+          "evidence": [
+            {
+              "source": "visible_label",
+              "value": "2026-08-01"
+            }
+          ]
+        },
+        "line_status": {
+          "value": "purchased_and_received",
+          "confidence": 0.98,
+          "calculated": false,
+          "evidence": [
+            {
+              "source": "visible_label",
+              "value": "已收货"
+            }
+          ]
+        },
+        "item_type": {
+          "value": "food",
+          "confidence": 0.98,
+          "calculated": false,
+          "evidence": [
+            {
+              "source": "visible_label",
+              "value": "果蔬汁"
+            }
+          ]
+        },
+        "visibility_status": {
+          "value": "visible",
+          "confidence": 0.98,
+          "calculated": false,
+          "evidence": [
+            {
+              "source": "visible_label",
+              "value": "商品明细"
             }
           ]
         }
       }
+    ],
+    "unresolved_issues": [
+      "交易时间未显示"
     ]
   },
   "accounting_content": {
     "executable": true,
-    "merchant": null,
+    "merchant": "小象超市",
     "transaction_time": null,
     "final_paid_amount": 65.48,
     "items": [
       {
         "product_index": 0,
-        "full_name": "\u751c\u7389\u7c73",
-        "specification": "\u7ea6850 g \u00d7 2",
+        "display_name": "甜玉米",
+        "specification": "约850g",
         "quantity": 2,
         "quantity_unit": null,
         "nominal_weight_or_volume": {
@@ -1284,14 +1356,12 @@
           "unit": "g"
         },
         "actual_weight_or_volume": null,
-        "weight_variance": null,
-        "line_paid_amount": 11.78,
-        "refund_amount": null
+        "line_paid_amount": 11.78
       },
       {
         "product_index": 1,
-        "full_name": "\u9c9c\u725b\u5976",
-        "specification": "1.5 L \u00d7 1",
+        "display_name": "鲜牛奶",
+        "specification": "1.5L",
         "quantity": 1,
         "quantity_unit": null,
         "nominal_weight_or_volume": {
@@ -1299,14 +1369,12 @@
           "unit": "L"
         },
         "actual_weight_or_volume": null,
-        "weight_variance": null,
-        "line_paid_amount": 10.9,
-        "refund_amount": null
+        "line_paid_amount": 10.9
       },
       {
         "product_index": 2,
-        "full_name": "\u9ec4\u74dc",
-        "specification": "\u7ea6700 g \u00d7 1",
+        "display_name": "黄瓜",
+        "specification": "约700g",
         "quantity": 1,
         "quantity_unit": null,
         "nominal_weight_or_volume": {
@@ -1314,14 +1382,12 @@
           "unit": "g"
         },
         "actual_weight_or_volume": null,
-        "weight_variance": null,
-        "line_paid_amount": 4.99,
-        "refund_amount": null
+        "line_paid_amount": 4.99
       },
       {
         "product_index": 3,
-        "full_name": "\u897f\u5170\u82b1",
-        "specification": "\u7ea6600 g \u00d7 1",
+        "display_name": "西兰花",
+        "specification": "约600g",
         "quantity": 1,
         "quantity_unit": null,
         "nominal_weight_or_volume": {
@@ -1329,14 +1395,12 @@
           "unit": "g"
         },
         "actual_weight_or_volume": null,
-        "weight_variance": null,
-        "line_paid_amount": 3.95,
-        "refund_amount": null
+        "line_paid_amount": 3.95
       },
       {
         "product_index": 4,
-        "full_name": "\u8c46\u6d46",
-        "specification": "1 L \u00d7 2",
+        "display_name": "豆浆",
+        "specification": "1L",
         "quantity": 2,
         "quantity_unit": null,
         "nominal_weight_or_volume": {
@@ -1344,14 +1408,12 @@
           "unit": "L"
         },
         "actual_weight_or_volume": null,
-        "weight_variance": null,
-        "line_paid_amount": 13.0,
-        "refund_amount": null
+        "line_paid_amount": 13
       },
       {
         "product_index": 5,
-        "full_name": "\u4e91\u5357\u751f\u83dc",
-        "specification": "\u7ea6500 g \u00d7 1",
+        "display_name": "生菜",
+        "specification": "约500g",
         "quantity": 1,
         "quantity_unit": null,
         "nominal_weight_or_volume": {
@@ -1359,14 +1421,12 @@
           "unit": "g"
         },
         "actual_weight_or_volume": null,
-        "weight_variance": null,
-        "line_paid_amount": 4.96,
-        "refund_amount": null
+        "line_paid_amount": 4.96
       },
       {
         "product_index": 6,
-        "full_name": "\u9999\u8549",
-        "specification": "\u7ea6800 g \u00d7 1",
+        "display_name": "香蕉",
+        "specification": "约800g",
         "quantity": 1,
         "quantity_unit": null,
         "nominal_weight_or_volume": {
@@ -1374,13 +1434,34 @@
           "unit": "g"
         },
         "actual_weight_or_volume": null,
-        "weight_variance": null,
-        "line_paid_amount": 11.9,
-        "refund_amount": null
+        "line_paid_amount": 11.9
+      },
+      {
+        "product_index": 7,
+        "display_name": "鲜牛奶",
+        "specification": "260ml×3瓶",
+        "quantity": 1,
+        "quantity_unit": "组",
+        "nominal_weight_or_volume": null,
+        "actual_weight_or_volume": null,
+        "line_paid_amount": 3
+      },
+      {
+        "product_index": 8,
+        "display_name": "果蔬汁",
+        "specification": "300ml",
+        "quantity": 1,
+        "quantity_unit": "瓶",
+        "nominal_weight_or_volume": {
+          "value": 300,
+          "unit": "ml"
+        },
+        "actual_weight_or_volume": null,
+        "line_paid_amount": 0
       }
     ],
     "issues": [
-      "two item kinds are not expanded"
+      "交易时间未显示"
     ]
   },
   "inventory_content": {
@@ -1388,10 +1469,10 @@
     "items": [
       {
         "product_index": 0,
-        "food_name": "\u751c\u7389\u7c73",
+        "display_name": "甜玉米",
         "quantity": 2,
         "quantity_unit": null,
-        "specification": "\u7ea6850 g \u00d7 2",
+        "specification": "约850g",
         "weight_or_volume": {
           "value": 850,
           "unit": "g"
@@ -1400,22 +1481,22 @@
       },
       {
         "product_index": 1,
-        "food_name": "\u9c9c\u725b\u5976",
+        "display_name": "鲜牛奶",
         "quantity": 1,
         "quantity_unit": null,
-        "specification": "1.5 L \u00d7 1",
+        "specification": "1.5L",
         "weight_or_volume": {
           "value": 1.5,
           "unit": "L"
         },
-        "production_date": null
+        "production_date": "2026-08-03"
       },
       {
         "product_index": 2,
-        "food_name": "\u9ec4\u74dc",
+        "display_name": "黄瓜",
         "quantity": 1,
         "quantity_unit": null,
-        "specification": "\u7ea6700 g \u00d7 1",
+        "specification": "约700g",
         "weight_or_volume": {
           "value": 700,
           "unit": "g"
@@ -1424,10 +1505,10 @@
       },
       {
         "product_index": 3,
-        "food_name": "\u897f\u5170\u82b1",
+        "display_name": "西兰花",
         "quantity": 1,
         "quantity_unit": null,
-        "specification": "\u7ea6600 g \u00d7 1",
+        "specification": "约600g",
         "weight_or_volume": {
           "value": 600,
           "unit": "g"
@@ -1436,10 +1517,10 @@
       },
       {
         "product_index": 4,
-        "food_name": "\u8c46\u6d46",
+        "display_name": "豆浆",
         "quantity": 2,
         "quantity_unit": null,
-        "specification": "1 L \u00d7 2",
+        "specification": "1L",
         "weight_or_volume": {
           "value": 1,
           "unit": "L"
@@ -1448,10 +1529,10 @@
       },
       {
         "product_index": 5,
-        "food_name": "\u4e91\u5357\u751f\u83dc",
+        "display_name": "生菜",
         "quantity": 1,
         "quantity_unit": null,
-        "specification": "\u7ea6500 g \u00d7 1",
+        "specification": "约500g",
         "weight_or_volume": {
           "value": 500,
           "unit": "g"
@@ -1460,25 +1541,43 @@
       },
       {
         "product_index": 6,
-        "food_name": "\u9999\u8549",
+        "display_name": "香蕉",
         "quantity": 1,
         "quantity_unit": null,
-        "specification": "\u7ea6800 g \u00d7 1",
+        "specification": "约800g",
         "weight_or_volume": {
           "value": 800,
           "unit": "g"
         },
         "production_date": null
+      },
+      {
+        "product_index": 7,
+        "display_name": "鲜牛奶",
+        "quantity": 1,
+        "quantity_unit": "组",
+        "specification": "260ml×3瓶",
+        "weight_or_volume": null,
+        "production_date": "2026-08-02"
+      },
+      {
+        "product_index": 8,
+        "display_name": "果蔬汁",
+        "quantity": 1,
+        "quantity_unit": "瓶",
+        "specification": "300ml",
+        "weight_or_volume": {
+          "value": 300,
+          "unit": "ml"
+        },
+        "production_date": "2026-08-01"
       }
     ],
     "excluded_items": [],
-    "issues": [
-      "two item kinds are not expanded"
-    ]
+    "issues": []
   },
   "warnings": [
-    "\u53e6\u6709 2 \u79cd\u5546\u54c1\u672a\u5c55\u5f00",
-    "\u53e6\u6709 2 \u79cd\u5546\u54c1\u672a\u5c55\u5f00\uff0c\u672c\u6b21\u672a\u8bc6\u522b\u3001\u672a\u731c\u6d4b\u3001\u4e0d\u4f1a\u63d0\u4ea4\u3002"
+    "交易时间未显示"
   ],
   "handoff": null
 }

@@ -20,7 +20,7 @@ class RouterV31FixtureSchemaTests(unittest.TestCase):
 
     def fixture(self, name: str) -> dict:
         path = FIXTURES / name
-        self.assertTrue(path.is_file(), f"missing v3 fixture: {name}")
+        self.assertTrue(path.is_file(), f"missing v3.1 fixture: {name}")
         return json.loads(path.read_text(encoding="utf-8"))
 
     def validation_messages(
@@ -184,18 +184,18 @@ class RouterV31FixtureSchemaTests(unittest.TestCase):
             with self.subTest(fixture=path.name):
                 self.assert_schema_valid(json.loads(path.read_text(encoding="utf-8")))
 
-    def test_v3_fixtures_preserve_exact_attachment_coverage_and_count(self) -> None:
+    def test_v31_fixtures_preserve_exact_attachment_coverage_and_count(self) -> None:
         for name in [
-            "durian-order.v3.json",
-            "partial-nine-item-order.v3.json",
-            "partial-refined-nine-item-order.v3.json",
-            "failed-recognition.v3.json",
+            "durian-order.v3.1.json",
+            "partial-nine-item-order.v3.1.json",
+            "partial-refined-nine-item-order.v3.1.json",
+            "failed-recognition.v3.1.json",
         ]:
             with self.subTest(fixture=name):
                 self.assert_runtime_attachment_invariants(self.fixture(name))
 
     def test_attachment_coverage_helper_rejects_count_and_index_mismatches(self) -> None:
-        baseline = self.fixture("partial-nine-item-order.v3.json")
+        baseline = self.fixture("partial-nine-item-order.v3.1.json")
         mutations = {
             "source image count": lambda record: record["source"].__setitem__("image_count", 2),
             "attachment count": lambda record: record["recognition_run"].__setitem__(
@@ -290,7 +290,7 @@ class RouterV31FixtureSchemaTests(unittest.TestCase):
             self.assertNotIn(forbidden_text, rendered)
 
     def test_hidden_items_warn_without_triggering_refinement(self) -> None:
-        record = self.fixture("partial-nine-item-order.v3.json")
+        record = self.fixture("partial-nine-item-order.v3.1.json")
         self.assertEqual(record["recognition_run"]["pass_count"], 1)
         self.assertEqual(record["recognition_run"]["refinement"]["status"], "not_needed")
         self.assertEqual(len(record["accounting_content"]["items"]), 7)
@@ -298,7 +298,7 @@ class RouterV31FixtureSchemaTests(unittest.TestCase):
         self.assertIn("另有 2 种商品未展开", record["warnings"])
 
     def test_failed_recognition_has_no_actionable_content_or_handoff(self) -> None:
-        record = self.fixture("failed-recognition.v3.json")
+        record = self.fixture("failed-recognition.v3.1.json")
         self.assertEqual(record["preview_state"], "failed")
         self.assertEqual(record["recognition_run"]["pass_count"], 0)
         self.assertIsNone(record["cleaned_text"])
@@ -307,7 +307,7 @@ class RouterV31FixtureSchemaTests(unittest.TestCase):
         self.assertIsNone(record["handoff"])
 
     def test_failed_and_not_executed_recognition_fail_closed(self) -> None:
-        baseline = self.fixture("failed-recognition.v3.json")
+        baseline = self.fixture("failed-recognition.v3.1.json")
         for status, pass_count in [("failed", 0), ("not_executed", 0)]:
             with self.subTest(status=status):
                 record = copy.deepcopy(baseline)
@@ -332,8 +332,8 @@ class RouterV31FixtureSchemaTests(unittest.TestCase):
                 self.assertIsNone(record["inventory_content"])
                 self.assertIsNone(record["handoff"])
 
-                actionable = self.fixture("durian-order.v3.json")
-                handed_off = self.fixture("handed-off.v3.json")
+                actionable = self.fixture("durian-order.v3.1.json")
+                handed_off = self.fixture("handed-off.v3.1.json")
                 unsafe_values = {
                     "cleaned_text": actionable["cleaned_text"],
                     "accounting_content": actionable["accounting_content"],
@@ -347,7 +347,7 @@ class RouterV31FixtureSchemaTests(unittest.TestCase):
                         self.assert_schema_invalid(unsafe)
 
     def test_refinement_statuses_enforce_valid_pass_count_combinations(self) -> None:
-        failed_initial = self.fixture("failed-recognition.v3.json")
+        failed_initial = self.fixture("failed-recognition.v3.1.json")
         for pass_count in [0, 1]:
             with self.subTest(initial_failure_pass_count=pass_count):
                 record = copy.deepcopy(failed_initial)
@@ -427,7 +427,7 @@ class RouterV31FixtureSchemaTests(unittest.TestCase):
                 invalid["recognition_run"]["refinement"]["status"] = refinement_status
                 self.assert_schema_invalid(invalid)
 
-        not_needed = self.fixture("partial-nine-item-order.v3.json")
+        not_needed = self.fixture("partial-nine-item-order.v3.1.json")
         run = not_needed["recognition_run"]
         self.assertEqual(run["pass_count"], 1)
         self.assertEqual(run["refinement"]["status"], "not_needed")
@@ -452,7 +452,7 @@ class RouterV31FixtureSchemaTests(unittest.TestCase):
                 invalid["recognition_run"]["pass_count"] = pass_count
                 self.assert_schema_invalid(invalid)
 
-        succeeded = self.fixture("durian-order.v3.json")
+        succeeded = self.fixture("durian-order.v3.1.json")
         for refinement_status, aggregate_status in [
             ("succeeded", "succeeded"),
             ("partial", "partial"),
@@ -488,7 +488,7 @@ class RouterV31FixtureSchemaTests(unittest.TestCase):
         self.assert_schema_invalid(aggregate_failed)
 
     def test_partial_without_refinement_requires_a_partial_attachment(self) -> None:
-        record = self.fixture("partial-nine-item-order.v3.json")
+        record = self.fixture("partial-nine-item-order.v3.1.json")
         run = record["recognition_run"]
         self.assertEqual(run["status"], "partial")
         self.assertEqual(run["refinement"]["status"], "not_needed")
@@ -499,14 +499,14 @@ class RouterV31FixtureSchemaTests(unittest.TestCase):
         self.assert_schema_invalid(record)
 
     def test_refinement_succeeded_allows_empty_issues(self) -> None:
-        record = self.fixture("durian-order.v3.json")
+        record = self.fixture("durian-order.v3.1.json")
         refinement = record["recognition_run"]["refinement"]
         self.assertEqual(refinement["status"], "succeeded")
         refinement["issues"] = []
         self.assert_schema_valid(record)
 
     def test_handoff_selected_scopes_require_executable_content(self) -> None:
-        handed_off = self.fixture("handed-off.v3.json")
+        handed_off = self.fixture("handed-off.v3.1.json")
 
         accounting_only = copy.deepcopy(handed_off)
         accounting_only["handoff"]["selected_scopes"] = ["accounting"]
@@ -559,7 +559,7 @@ class RouterV31FixtureSchemaTests(unittest.TestCase):
                     self.assert_runtime_handoff_invariants(record)
 
     def test_successful_targeted_refinement_can_remain_aggregate_partial(self) -> None:
-        record = self.fixture("partial-refined-nine-item-order.v3.json")
+        record = self.fixture("partial-refined-nine-item-order.v3.1.json")
         run = record["recognition_run"]
         self.assertEqual(run["status"], "partial")
         self.assertEqual(run["pass_count"], 2)
@@ -593,7 +593,7 @@ class RouterV31FixtureSchemaTests(unittest.TestCase):
         self.assert_schema_invalid(missing_partial_witness)
 
     def test_inventory_view_preserves_count_and_nominal_measurement_separately(self) -> None:
-        record = self.fixture("partial-nine-item-order.v3.json")
+        record = self.fixture("partial-nine-item-order.v3.1.json")
         inventory = {
             item["product_index"]: item for item in record["inventory_content"]["items"]
         }
@@ -627,7 +627,7 @@ class RouterV31FixtureSchemaTests(unittest.TestCase):
                     self.assert_runtime_content_invariants(invalid_view)
 
     def test_every_fixture_content_view_maps_to_its_canonical_product(self) -> None:
-        for path in sorted(FIXTURES.glob("*.v3.json")):
+        for path in sorted(FIXTURES.glob("*.v3.1.json")):
             with self.subTest(fixture=path.name):
                 record = json.loads(path.read_text(encoding="utf-8"))
                 self.assert_runtime_content_invariants(record)
@@ -739,8 +739,8 @@ class RouterV31FixtureSchemaTests(unittest.TestCase):
 
     def test_initial_preview_has_no_handoff_and_handed_off_is_singular(self) -> None:
         for name, recognition_status in [
-            ("durian-order.v3.json", "succeeded"),
-            ("partial-nine-item-order.v3.json", "partial"),
+            ("durian-order.v3.1.json", "succeeded"),
+            ("partial-nine-item-order.v3.1.json", "partial"),
         ]:
             with self.subTest(fixture=name):
                 record = self.fixture(name)
@@ -748,8 +748,8 @@ class RouterV31FixtureSchemaTests(unittest.TestCase):
                 self.assertEqual(record["preview_state"], "awaiting_confirmation")
                 self.assertIsNone(record["handoff"])
 
-        initial_preview = self.fixture("durian-order.v3.json")
-        handed_off = self.fixture("handed-off.v3.json")
+        initial_preview = self.fixture("durian-order.v3.1.json")
+        handed_off = self.fixture("handed-off.v3.1.json")
         self.assertEqual(handed_off["preview_state"], "handed_off")
         self.assertIsNotNone(handed_off["handoff"])
         self.assertEqual(handed_off["preview_id"], initial_preview["preview_id"])
@@ -769,7 +769,7 @@ class RouterV31FixtureSchemaTests(unittest.TestCase):
         missing_handoff["handoff"] = None
         self.assert_schema_invalid(missing_handoff)
 
-        corrected_preview = self.fixture("corrected-preview.v3.json")
+        corrected_preview = self.fixture("corrected-preview.v3.1.json")
         self.assertEqual(corrected_preview["preview_state"], "awaiting_confirmation")
         self.assertNotEqual(corrected_preview["preview_id"], initial_preview["preview_id"])
         self.assertIsNone(corrected_preview["handoff"])
@@ -798,7 +798,7 @@ class RouterV31FixtureSchemaTests(unittest.TestCase):
         self.assert_schema_valid(corrected_preview)
         self.assert_runtime_content_invariants(corrected_preview)
 
-        duplicate_confirmation = self.fixture("duplicate-confirmation.v3.json")
+        duplicate_confirmation = self.fixture("duplicate-confirmation.v3.1.json")
         self.assertEqual(duplicate_confirmation["preview_state"], "handed_off")
         self.assertEqual(duplicate_confirmation["preview_id"], handed_off["preview_id"])
         self.assertEqual(duplicate_confirmation["handoff"], handed_off["handoff"])

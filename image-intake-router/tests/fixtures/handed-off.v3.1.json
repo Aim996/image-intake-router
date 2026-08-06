@@ -1,10 +1,10 @@
 {
-  "schema_version": "image-intake-router.v3",
-  "preview_id": "preview:durian:20260805:corrected",
-  "preview_state": "awaiting_confirmation",
+  "schema_version": "image-intake-router.v3.1",
+  "preview_id": "preview:durian:20260805:001",
+  "preview_state": "handed_off",
   "source": {
     "image_count": 1,
-    "has_user_text": true
+    "has_user_text": false
   },
   "recognition_run": {
     "status": "succeeded",
@@ -28,9 +28,7 @@
       ],
       "targeted_fields": [
         "nominal_weight_or_volume",
-        "weight_variance",
-        "line_paid_amount",
-        "refund_amount"
+        "line_paid_amount"
       ],
       "attachment_indexes": [
         0
@@ -40,7 +38,7 @@
       ]
     }
   },
-  "cleaned_text": "\u91d1\u6795\u69b4\u83b2 \u7ea62.1kg \u00d7 1\u7c92\uff0c\u7528\u6237\u66f4\u6b63\u5b9e\u9645\u91cd\u91cf 1.872kg\uff0c\u5b9e\u4ed8\u00a5119.00\uff0c\u9000\u6b3e\u00a512.92\u3002",
+  "cleaned_text": "榴莲 约2.1kg×1，实付 ¥119.00。",
   "facts": {
     "order": {
       "merchant": {
@@ -66,61 +64,14 @@
           }
         ]
       },
-      "goods_subtotal": {
-        "value": null,
-        "confidence": 0,
-        "calculated": false,
-        "evidence": [],
-        "currency": null
-      },
-      "activity_discount": {
-        "value": null,
-        "confidence": 0,
-        "calculated": false,
-        "evidence": [],
-        "currency": null
-      },
-      "coupon_discount": {
-        "value": null,
-        "confidence": 0,
-        "calculated": false,
-        "evidence": [],
-        "currency": null
-      },
-      "packaging_fee": {
-        "value": null,
-        "confidence": 0,
-        "calculated": false,
-        "evidence": [],
-        "currency": null
-      },
-      "delivery_fee": {
-        "value": null,
-        "confidence": 0,
-        "calculated": false,
-        "evidence": [],
-        "currency": null
-      },
       "final_paid_amount": {
-        "value": 119.0,
+        "value": 119,
         "confidence": 0.98,
         "calculated": false,
         "evidence": [
           {
             "source": "visible_label",
             "value": "119.0"
-          }
-        ],
-        "currency": "CNY"
-      },
-      "refund_total": {
-        "value": 12.92,
-        "confidence": 0.98,
-        "calculated": false,
-        "evidence": [
-          {
-            "source": "visible_label",
-            "value": "12.92"
           }
         ],
         "currency": "CNY"
@@ -184,58 +135,47 @@
     "products": [
       {
         "full_name": {
-          "value": "\u91d1\u6795\u69b4\u83b2",
+          "value": "金枕榴莲",
           "confidence": 0.98,
           "calculated": false,
           "evidence": [
             {
               "source": "visible_label",
-              "value": "\u91d1\u6795\u69b4\u83b2"
-            }
-          ]
-        },
-        "normalized_name": {
-          "value": "\u69b4\u83b2",
-          "confidence": 0.94,
-          "calculated": false,
-          "evidence": [
-            {
-              "source": "visible_label",
-              "value": "\u91d1\u6795\u69b4\u83b2"
+              "value": "金枕榴莲"
             }
           ]
         },
         "specification": {
-          "value": "\u7ea62.1kg \u00d7 1\u7c92",
+          "value": "约2.1kg × 1粒",
           "confidence": 0.97,
           "calculated": false,
           "evidence": [
             {
               "source": "visible_label",
-              "value": "\u7ea62.1kg \u00d7 1\u7c92"
+              "value": "约2.1kg × 1粒"
             }
           ]
         },
         "purchase_quantity": {
           "value": 1,
-          "unit": "\u7c92",
+          "unit": "粒",
           "confidence": 0.99,
           "calculated": false,
           "evidence": [
             {
               "source": "visible_label",
-              "value": "\u00d71\u7c92"
+              "value": "×1粒"
             }
           ]
         },
         "quantity_unit": {
-          "value": "\u7c92",
+          "value": "粒",
           "confidence": 0.99,
           "calculated": false,
           "evidence": [
             {
               "source": "visible_label",
-              "value": "\u00d71\u7c92"
+              "value": "×1粒"
             }
           ]
         },
@@ -247,82 +187,39 @@
           "evidence": [
             {
               "source": "visible_label",
-              "value": "\u7ea62.1kg"
+              "value": "约2.1kg"
             }
           ]
         },
         "actual_weight_or_volume": {
-          "value": 1.872,
-          "unit": "kg",
-          "confidence": 1.0,
+          "value": null,
+          "unit": null,
+          "confidence": 0,
           "calculated": false,
-          "evidence": [
-            {
-              "source": "user_text",
-              "value": "1.872kg"
-            }
-          ]
+          "evidence": []
         },
         "billing_weight": {
           "value": null,
           "unit": null,
-          "confidence": 0.0,
-          "calculated": false,
-          "evidence": []
-        },
-        "weight_variance": {
-          "value": 228,
-          "unit": "g",
-          "confidence": 0.96,
-          "calculated": false,
-          "evidence": [
-            {
-              "source": "visible_label",
-              "value": "\u7f3a\u91cd228g"
-            }
-          ]
-        },
-        "original_amount": {
-          "value": null,
-          "currency": null,
-          "confidence": 0.0,
-          "calculated": false,
-          "evidence": []
-        },
-        "unit_price": {
-          "value": null,
-          "currency": null,
-          "confidence": 0.0,
+          "confidence": 0,
           "calculated": false,
           "evidence": []
         },
         "line_paid_amount": {
-          "value": 119.0,
+          "value": 119,
           "currency": "CNY",
           "confidence": 0.99,
           "calculated": false,
           "evidence": [
             {
               "source": "visible_label",
-              "value": "\u5b9e\u4ed8\u00a5119.00"
-            }
-          ]
-        },
-        "refund_amount": {
-          "value": 12.92,
-          "currency": "CNY",
-          "confidence": 0.98,
-          "calculated": false,
-          "evidence": [
-            {
-              "source": "visible_label",
-              "value": "\u9000\u6b3e\u00a512.92"
+              "value": "实付¥119.00"
             }
           ]
         },
         "production_date": {
           "value": null,
-          "confidence": 0.0,
+          "confidence": 0,
           "calculated": false,
           "evidence": []
         },
@@ -333,7 +230,7 @@
           "evidence": [
             {
               "source": "visible_label",
-              "value": "\u5df2\u6536\u8d27"
+              "value": "已收货"
             }
           ]
         },
@@ -344,18 +241,30 @@
           "evidence": [
             {
               "source": "visible_label",
-              "value": "\u69b4\u83b2"
+              "value": "榴莲"
             }
           ]
         },
         "visibility_status": {
           "value": "visible",
-          "confidence": 1.0,
+          "confidence": 1,
           "calculated": false,
           "evidence": [
             {
               "source": "visible_label",
-              "value": "\u5546\u54c1\u660e\u7ec6"
+              "value": "商品明细"
+            }
+          ]
+        },
+        "display_name": {
+          "value": "榴莲",
+          "confidence": 0.94,
+          "calculated": true,
+          "evidence": [
+            {
+              "source": "calculated",
+              "value": "榴莲",
+              "reason": "Simplified from visible full name: 金枕榴莲"
             }
           ]
         }
@@ -366,28 +275,20 @@
     "executable": true,
     "merchant": null,
     "transaction_time": null,
-    "final_paid_amount": 119.0,
+    "final_paid_amount": 119,
     "items": [
       {
         "product_index": 0,
-        "full_name": "\u91d1\u6795\u69b4\u83b2",
-        "specification": "\u7ea62.1kg \u00d7 1\u7c92",
+        "specification": "约2.1kg × 1粒",
         "quantity": 1,
-        "quantity_unit": "\u7c92",
+        "quantity_unit": "粒",
         "nominal_weight_or_volume": {
           "value": 2.1,
           "unit": "kg"
         },
-        "actual_weight_or_volume": {
-          "value": 1.872,
-          "unit": "kg"
-        },
-        "weight_variance": {
-          "value": 228,
-          "unit": "g"
-        },
-        "line_paid_amount": 119.0,
-        "refund_amount": 12.92
+        "actual_weight_or_volume": null,
+        "line_paid_amount": 119,
+        "display_name": "榴莲"
       }
     ],
     "issues": []
@@ -397,20 +298,28 @@
     "items": [
       {
         "product_index": 0,
-        "food_name": "\u91d1\u6795\u69b4\u83b2",
         "quantity": 1,
-        "quantity_unit": "\u7c92",
-        "specification": "\u7ea62.1kg \u00d7 1\u7c92",
+        "quantity_unit": "粒",
+        "specification": "约2.1kg × 1粒",
         "weight_or_volume": {
-          "value": 1.872,
+          "value": 2.1,
           "unit": "kg"
         },
-        "production_date": null
+        "production_date": null,
+        "display_name": "榴莲"
       }
     ],
     "excluded_items": [],
     "issues": []
   },
-  "warnings": [],
-  "handoff": null
+  "warnings": [
+    "实际更正重量不可见。"
+  ],
+  "handoff": {
+    "preview_id": "preview:durian:20260805:001",
+    "selected_scopes": [
+      "accounting",
+      "inventory"
+    ]
+  }
 }
