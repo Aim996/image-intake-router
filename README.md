@@ -1,24 +1,29 @@
 # image-intake-router
 
-`image-intake-router` 3.0.0 is a local OpenClaw Skill for payment screenshots, receipts, order pages, nutrition labels, food packages, grocery screenshots, and meal photos. Its schema is `image-intake-router.v3`.
+`image-intake-router` 3.1.0 is a local OpenClaw Skill for payment screenshots, receipts, order pages, nutrition labels, food packages, grocery screenshots, and meal photos. Its schema is `image-intake-router.v3.1`.
 
-The router owns focused image recognition and confirmation: every image gets one initial visual pass, followed by at most one omission-driven targeted refinement when needed. It cleans visible text into one canonical fact set, audits visible fields, and produces a detailed preview in the exact order `【入账内容】`, `【入库内容】`, `【需要注意】`.
+The router performs one initial real visual pass for every image and at most one omission-driven targeted refinement. It builds one canonical fact set, keeps visible full names only for evidence/deduplication, uses concise product names for business content, records actual paid amounts and reliable visible production dates, and renders a compact `【入账】` / `【入库】` / `【需确认】` preview.
 
-The initial image turn only previews and creates zero handoffs. A later affirmative confirmation creates at most one handoff; `只记账` and `只入库` limit its scope. OpenClaw discovers and invokes downstream Skills. The router does not own downstream execution, inspect or modify downstream projects/private APIs/databases, or define private adapter payloads, ports, retries, or status protocols.
+The initial image turn creates zero handoffs. A later affirmative confirmation creates at most one handoff; `只记账` and `只入库` limit scope. OpenClaw discovers and invokes downstream Skills. The router does not own downstream execution, inspect or modify downstream projects/private APIs/databases, or define private adapter payloads, ports, retries, or status protocols.
 
-Hidden, blocked, cropped, blurred, or unreadable content is disclosed rather than guessed. Reliable visible content remains usable, including visible-only handoff when other items are hidden. Version 3 does not migrate, modify, or delete downstream data and requires no downstream repository or API changes.
+Refund/cancellation text is transient validity input: a partially refunded received item remains eligible, while a fully refunded/cancelled/not-received item is excluded. Refund amounts, original/unit prices, discounts, fee breakdowns, member benefits, and free/gift explanations are absent from facts, preview content, and handoff content.
 
 ## Install and safe rollback
 
-Install the exact v3 assets `image-intake-router-3.0.0.tgz` and `image-intake-router-3.0.0.tgz.sha256` by following [the installation guide](docs/INSTALL.md). It includes SHA-256 verification, Windows PowerShell, Linux/NAS commands, the nested Skill layout, and business-level UAT. Multiple devices can repeat the same fixed GitHub Release commands independently.
+Install the exact v3.1 assets `image-intake-router-3.1.0.tgz` and `image-intake-router-3.1.0.tgz.sha256` by following [the installation guide](docs/INSTALL.md). It includes SHA-256 verification, Windows PowerShell, Linux/NAS commands, the nested Skill layout, source-update commands, and business-level UAT.
 
-Keep the immutable [v2.1.0 release](https://github.com/Aim996/image-intake-router/releases/tag/v2.1.0), exact assets `image-intake-router-2.1.0.tgz` and `image-intake-router-2.1.0.tgz.sha256`, the verified old Skill directory, and the prior OpenClaw configuration as the rollback target. Follow [the upgrading guide](docs/UPGRADING.md) to restore them without touching downstream data. Old tags and assets must not be renamed or deleted.
+Keep both previous immutable releases as rollback targets:
 
-For the complete public behavior, see the version-pinned [识图输出与确认规范](https://github.com/Aim996/image-intake-router/blob/v3.0.0/%E8%AF%86%E5%9B%BE%E8%BE%93%E5%87%BA%E4%B8%8E%E7%A1%AE%E8%AE%A4%E8%A7%84%E8%8C%83.md). For OpenClaw media behavior, see the official [media-understanding guide](https://github.com/openclaw/openclaw/blob/main/docs/nodes/media-understanding.md) and [media overview](https://docs.openclaw.ai/tools/media-overview).
+- [v3.0.0 release](https://github.com/Aim996/image-intake-router/releases/tag/v3.0.0): `image-intake-router-3.0.0.tgz` and `image-intake-router-3.0.0.tgz.sha256`.
+- [v2.1.0 release](https://github.com/Aim996/image-intake-router/releases/tag/v2.1.0): `image-intake-router-2.1.0.tgz` and `image-intake-router-2.1.0.tgz.sha256`.
+
+Follow [the upgrading guide](docs/UPGRADING.md) to restore a fixed version without touching downstream data. Old tags and assets must not be renamed, deleted, or overwritten.
+
+For complete public behavior, see the version-pinned [识图输出与确认规范](https://github.com/Aim996/image-intake-router/blob/v3.1.0/%E8%AF%86%E5%9B%BE%E8%BE%93%E5%87%BA%E4%B8%8E%E7%A1%AE%E8%AE%A4%E8%A7%84%E8%8C%83.md). For OpenClaw media behavior, see the official [media-understanding guide](https://github.com/openclaw/openclaw/blob/main/docs/nodes/media-understanding.md) and [media overview](https://docs.openclaw.ai/tools/media-overview).
 
 ## Data boundary
 
-The router does not store original images, paths, base64, full OCR, credentials, or local business databases. It does not migrate, modify, delete, retry, or query downstream data. Downstream Skills own their validation, execution, storage, recovery, and compatibility.
+The router does not store original images, paths, base64, full OCR, credentials, or local business databases. It does not migrate, modify, delete, retry, or query downstream data. Downstream Skills own validation, execution, storage, recovery, and compatibility.
 
 ## Development checks
 

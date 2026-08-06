@@ -226,7 +226,7 @@ class RepositoryContractTests(unittest.TestCase):
             self.assertIn("3.1.0", self.read(path), path)
         self.assertIn("version: 3.1.0", self.read("image-intake-router/SKILL.md"))
 
-    def test_v3_docs_preserve_v2_1_rollback_and_recognition_handoff_contract(self) -> None:
+    def test_v31_docs_preserve_rollback_and_recognition_handoff_contract(self) -> None:
         combined = "\n".join(
             self.read(path)
             for path in [
@@ -239,8 +239,9 @@ class RepositoryContractTests(unittest.TestCase):
             "3.1.0", "3.0.0", "2.1.0", "image-intake-router.v3.1",
             "识图输出与确认规范",
             "最多一次补充识读",
-            "【入账内容】",
-            "【入库内容】",
+            "【入账】",
+            "【入库】",
+            "【需确认】",
             "OpenClaw",
             "不修改下游项目",
         ]:
@@ -262,6 +263,19 @@ class RepositoryContractTests(unittest.TestCase):
             self.assertIn(asset, readme)
             self.assertIn(asset, install)
         for phrase in ["2.1.0", "回滚", "恢复"]:
+            self.assertIn(phrase, upgrading)
+
+    def test_v3_0_rollback_assets_are_explicit_in_user_recovery_docs(self) -> None:
+        readme = self.read("README.md")
+        install = self.read("docs/INSTALL.md")
+        upgrading = self.read("docs/UPGRADING.md")
+        rollback_tag = "https://github.com/Aim996/image-intake-router/releases/tag/v3.0.0"
+        assets = ["image-intake-router-3.0.0.tgz", "image-intake-router-3.0.0.tgz.sha256"]
+        self.assertIn(rollback_tag, readme)
+        for asset in assets:
+            self.assertIn(asset, readme)
+            self.assertIn(asset, install)
+        for phrase in ["3.0.0", "回滚", "恢复"]:
             self.assertIn(phrase, upgrading)
 
     def test_install_docs_name_exact_assets_platforms_and_layout(self) -> None:

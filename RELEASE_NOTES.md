@@ -1,21 +1,20 @@
-# image-intake-router 3.0.0 Release Notes
+# image-intake-router 3.1.0 Release Notes
 
-3.0.0 将产品聚焦为识图、预览与确认入口，使用 Schema `image-intake-router.v3`。每张图片先进行一次真实视觉识别；若初次结果遗漏可见关键字段，允许最多一次补充识读。清洗文字、字段证据和限制会合并为一个统一事实集。
+3.1.0 使用 Schema `image-intake-router.v3.1`，把 v3.0.0 的详细确认页收敛为更容易核实的紧凑业务预览。
 
 ## 用户体验
 
-初始含图回合依次输出详细的 `【入账内容】`、`【入库内容】`、`【需要注意】`，并创建零次下游交接。用户在后续回合明确肯定确认后，OpenClaw 才发现并调用合适的下游 Skill，且同一确认最多交接一次；`只记账` 与 `只入库` 可限制范围。
+- 商品业务名称自动简化，例如“原生高钙小象3.6g乳蛋白鲜牛奶”显示为“鲜牛奶”，“小象HPP…复合果蔬汁”显示为“果蔬汁”。
+- 入账只显示订单最终实付和商品行实付；保留真实 `¥0.00`，不推测免费、赠品或会员权益。
+- 图片明确可见的生产日期进入入库内容；没有日期时不显示占位，不从其他日期或保质期推算。
+- 退款/短重只用于判断商品是否收到，退款金额不记录、不展示、不交接。部分退款且已收到的商品仍可入库。
+- 商品列表只显示一次；全部食品可入库时用“以上 N 种食品均入库”汇总。
+- `【需确认】` 只保留交易时间缺失、隐藏商品或字段不可读等可行动问题。
 
-隐藏、遮挡、裁切、模糊、被阻止或不可读内容会披露而不会猜测。可靠可见内容仍可使用；存在隐藏项目时，只交接可靠可见内容并保留限制说明。
-
-## 所有权变化
-
-路由器不再发布或拥有下游专用 adapter manifest、固定逻辑 endpoint/端口、preflight/execute/status Schema、私有 payload 映射、幂等/重试/状态协议或版本协商。OpenClaw 负责下游 Skill 发现和调用，下游 Skill 负责自己的执行、存储、恢复与兼容性。
-
-v3 不迁移、修改或删除任何下游数据，不修改下游项目、私有 API 或数据库，也不要求下游仓库/API 变化。
+初始含图回合仍创建零次 handoff；用户后续 `确认`、`只记账` 或 `只入库` 后最多交接一次。OpenClaw 继续拥有下游 Skill 的发现与调用；路由器不修改下游项目、私有 API 或数据库。
 
 ## 安装与回滚
 
-3.0.0 的精确发布资产为 `image-intake-router-3.0.0.tgz` 和 `image-intake-router-3.0.0.tgz.sha256`。按照 [安装指南](docs/INSTALL.md) 在每台设备上分别从固定 GitHub Release 下载、核验 SHA-256，并只安装归档内嵌套 Skill 目录。
+固定发布资产为 `image-intake-router-3.1.0.tgz` 和 `image-intake-router-3.1.0.tgz.sha256`。请按 [安装指南](docs/INSTALL.md) 下载并核验 SHA-256，只安装归档内嵌套 Skill 目录。
 
-保留不可变的 [v2.1.0 Release](https://github.com/Aim996/image-intake-router/releases/tag/v2.1.0)、精确旧资产 `image-intake-router-2.1.0.tgz`、`image-intake-router-2.1.0.tgz.sha256`、已验证旧 Skill 目录和旧 OpenClaw 配置。若 v3 UAT 不通过，按 [更新与回滚](docs/UPGRADING.md) 恢复这些内容；不要重命名或删除旧 tag/资产，也不要覆盖、迁移或恢复下游数据库。
+保留不可变 [v3.0.0 Release](https://github.com/Aim996/image-intake-router/releases/tag/v3.0.0) 与 [v2.1.0 Release](https://github.com/Aim996/image-intake-router/releases/tag/v2.1.0)。回滚只恢复 Skill 和 OpenClaw 配置，不覆盖、迁移或恢复下游数据库。
