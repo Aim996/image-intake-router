@@ -195,6 +195,12 @@ class RouterV3FixtureSchemaTests(unittest.TestCase):
                     invalid["recognition_run"]["refinement"]["status"] = refinement_status
                     self.assert_schema_invalid(invalid)
 
+        invalid = copy.deepcopy(failed_initial)
+        invalid["recognition_run"]["status"] = "failed"
+        invalid["recognition_run"]["pass_count"] = 2
+        invalid["recognition_run"]["refinement"]["status"] = "not_applicable"
+        self.assert_schema_invalid(invalid)
+
         not_executed = copy.deepcopy(failed_initial)
         not_executed_run = not_executed["recognition_run"]
         not_executed_run["status"] = "not_executed"
@@ -209,6 +215,45 @@ class RouterV3FixtureSchemaTests(unittest.TestCase):
             invalid = copy.deepcopy(not_executed)
             invalid["recognition_run"]["pass_count"] = pass_count
             self.assert_schema_invalid(invalid)
+        for refinement_status, pass_count, detail in [
+            ("not_needed", 1, {"reasons": [], "targeted_fields": [], "attachment_indexes": [], "issues": []}),
+            (
+                "succeeded",
+                2,
+                {
+                    "reasons": ["visible-field omission"],
+                    "targeted_fields": ["nominal_weight_or_volume"],
+                    "attachment_indexes": [0],
+                    "issues": ["refinement completed"],
+                },
+            ),
+            (
+                "partial",
+                2,
+                {
+                    "reasons": ["visible-field omission"],
+                    "targeted_fields": ["nominal_weight_or_volume"],
+                    "attachment_indexes": [0],
+                    "issues": ["refinement incomplete"],
+                },
+            ),
+            (
+                "failed",
+                2,
+                {
+                    "reasons": ["visible-field omission"],
+                    "targeted_fields": ["nominal_weight_or_volume"],
+                    "attachment_indexes": [0],
+                    "issues": ["refinement failed"],
+                },
+            ),
+        ]:
+            with self.subTest(not_executed_refinement=refinement_status):
+                invalid = copy.deepcopy(not_executed)
+                invalid["recognition_run"]["pass_count"] = pass_count
+                invalid["recognition_run"]["refinement"].update(detail)
+                invalid["recognition_run"]["refinement"]["status"] = refinement_status
+                self.assert_schema_invalid(invalid)
 
         not_needed = self.fixture("partial-nine-item-order.v3.json")
         run = not_needed["recognition_run"]
@@ -287,6 +332,14 @@ class RouterV3FixtureSchemaTests(unittest.TestCase):
         self.assertIsNotNone(handed_off["handoff"])
         self.assert_schema_valid(handed_off)
         self.assert_runtime_handoff_invariants(handed_off)
+
+        mismatched_handoff = copy.deepcopy(handed_off)
+        handoff_preview_id = mismatched_handoff["handoff"]["preview_id"]
+        replacement = "0" if handoff_preview_id[-1] != "0" else "1"
+        mismatched_handoff["handoff"]["preview_id"] = handoff_preview_id[:-1] + replacement
+        self.assert_schema_valid(mismatched_handoff)
+        with self.assertRaises(AssertionError):
+            self.assert_runtime_handoff_invariants(mismatched_handoff)
 
         missing_handoff = copy.deepcopy(handed_off)
         missing_handoff["handoff"] = None
