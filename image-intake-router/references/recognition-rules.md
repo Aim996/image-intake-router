@@ -58,11 +58,27 @@
 - `billing_weight`（计费重量）；
 - `line_paid_amount`（该商品行实付金额）；
 - `production_date`（生产日期）；
-- `line_status`（该行状态，例如已购、已收、待发货、已取消、已退款、缺货或未知）；
-- `item_type`（食品、非食品、费用/服务、优惠、广告/推荐或未知）；
-- `visibility_status`（可见、折叠或其他可见性状态）。
+- `line_status`（该行状态，必须使用下方规范令牌）；
+- `item_type`（商品类型，必须使用下方规范令牌）；
+- `visibility_status`（可见性，必须使用下方规范令牌）。
 
-广告、猜你喜欢、配送费、服务费、优惠券、红包、购物车和界面按钮不是食品商品行。视觉识别可以临时读取取消、退款、缺货和收货文字来判断有效性，但最终只保留业务状态：fully refunded（全额退款）、已取消、缺货、未送达或未实际收到的商品不进入可执行入账/入库内容；partial refund（部分退款）或短重但已经收到的商品继续保留。退款金额、短重数值和退款说明不写入统一事实、预览或 handoff。状态无法可靠确定时，把一句可行动问题放入 `【需确认】`，不得用金额猜测。
+`line_status` 只能使用：
+
+- 已完成购买并实际收到 → `purchased_and_received`；
+- 已购买但仍待配送/未收货 → `purchased_pending_delivery`；
+- fully refunded（全额退款）→ `fully_refunded`；
+- 已取消 → `cancelled`；
+- 缺货或不可供货 → `unavailable`；
+- 明确未收到 → `not_received`；
+- 状态无法可靠确定 → `unknown`。
+
+partial refund（部分退款）或短重但已收到 → `purchased_and_received`。不得把退款信息拼进状态令牌，也不得产生 Schema 枚举以外的中文或英文状态值。
+
+`item_type` 只能使用：食品 → `food`；实际购买的非食品 → `non_food`；包装/配送等费用或服务 → `fee_or_service`；优惠/券 → `discount`；广告/推荐 → `advertisement`；无法可靠判断 → `unknown`。
+
+`visibility_status` 只能使用：商品行完整可见 → `visible`；仅部分可见但仍有可用像素事实 → `partial`；折叠或隐藏 → `hidden`；无法可靠判断 → `unknown`。
+
+广告、猜你喜欢、配送费、服务费、优惠券、红包、购物车和界面按钮不是食品商品行。视觉识别可以临时读取取消、退款、缺货和收货文字来判断有效性，但只有 `purchased_and_received` 且 `visible` 的实际商品可进入可执行内容；库存还必须是 `food`。`fully_refunded`、`cancelled`、`unavailable`、`not_received`、`purchased_pending_delivery` 和 `unknown` 商品均不进入可执行入账/入库内容。退款金额、短重数值和退款说明不写入统一事实、预览或 handoff。状态无法可靠确定时，把一句可行动问题放入 `【需确认】`，不得用金额猜测。
 
 ## 6. 简化名称与日期
 

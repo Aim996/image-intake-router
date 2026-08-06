@@ -117,6 +117,20 @@ class ProductContractTests(unittest.TestCase):
         ]:
             self.assertIn(phrase, runtime)
 
+    def test_recognition_rules_document_strict_product_vocabularies(self) -> None:
+        rules = self.read(REFERENCES / "recognition-rules.md")
+        defs = json.loads(self.read(SCHEMA))["$defs"]
+        for definition in ["lineStatusFact", "itemTypeFact", "visibilityStatusFact"]:
+            values = defs[definition]["allOf"][1]["properties"]["value"]["enum"]
+            for value in values:
+                if value is not None:
+                    with self.subTest(definition=definition, value=value):
+                        self.assertIn(f"`{value}`", rules)
+        self.assertIn(
+            "partial refund（部分退款）或短重但已收到 → `purchased_and_received`",
+            rules,
+        )
+
     def test_skill_references_only_existing_local_files(self) -> None:
         content = self.read(SKILL)
         targets = set(re.findall(r"\]\((references/[^)]+\.md)\)", content))
