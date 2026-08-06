@@ -253,14 +253,14 @@
         },
         "actual_weight_or_volume": {
           "value": null,
-          "unit": "kg",
+          "unit": null,
           "confidence": 0.0,
           "calculated": false,
           "evidence": []
         },
         "billing_weight": {
           "value": null,
-          "unit": "kg",
+          "unit": null,
           "confidence": 0.0,
           "calculated": false,
           "evidence": []
@@ -279,14 +279,14 @@
         },
         "original_amount": {
           "value": null,
-          "currency": "CNY",
+          "currency": null,
           "confidence": 0.0,
           "calculated": false,
           "evidence": []
         },
         "unit_price": {
           "value": null,
-          "currency": "CNY",
+          "currency": null,
           "confidence": 0.0,
           "calculated": false,
           "evidence": []

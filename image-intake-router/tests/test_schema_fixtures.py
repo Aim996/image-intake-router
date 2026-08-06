@@ -23,7 +23,11 @@ class RouterV3FixtureSchemaTests(unittest.TestCase):
         self.assertTrue(path.is_file(), f"missing v3 fixture: {name}")
         return json.loads(path.read_text(encoding="utf-8"))
 
-    def validation_messages(self, instance: object) -> list[str]:
+    def validation_messages(
+        self,
+        instance: object,
+        validator: Draft202012Validator | None = None,
+    ) -> list[str]:
         def messages(error) -> list[str]:
             path = "/" + "/".join(str(part) for part in error.absolute_path)
             if error.context:
@@ -35,8 +39,9 @@ class RouterV3FixtureSchemaTests(unittest.TestCase):
             return current
 
         rendered = []
+        active_validator = validator or self.validator
         for error in sorted(
-            self.validator.iter_errors(instance),
+            active_validator.iter_errors(instance),
             key=lambda item: [str(part) for part in item.absolute_path],
         ):
             rendered.extend(messages(error))
@@ -48,6 +53,26 @@ class RouterV3FixtureSchemaTests(unittest.TestCase):
 
     def assert_schema_invalid(self, instance: object) -> None:
         self.assertNotEqual(self.validation_messages(instance), [])
+
+    def definition_validator(self, name: str) -> Draft202012Validator:
+        return Draft202012Validator(
+            {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "$ref": f"#/$defs/{name}",
+                "$defs": self.schema["$defs"],
+            },
+            format_checker=FormatChecker(),
+        )
+
+    def assert_definition_valid(self, name: str, instance: object) -> None:
+        messages = self.validation_messages(instance, self.definition_validator(name))
+        self.assertEqual(messages, [], "\n".join(messages))
+
+    def assert_definition_invalid(self, name: str, instance: object) -> None:
+        self.assertNotEqual(
+            self.validation_messages(instance, self.definition_validator(name)),
+            [],
+        )
 
     def assert_runtime_attachment_invariants(self, record: dict) -> None:
         run = record["recognition_run"]
@@ -67,6 +92,63 @@ class RouterV3FixtureSchemaTests(unittest.TestCase):
         handoff = record["handoff"]
         if handoff is not None:
             self.assertEqual(record["preview_id"], handoff["preview_id"])
+            for scope in handoff["selected_scopes"]:
+                content = record[f"{scope}_content"]
+                self.assertIsNotNone(content)
+                self.assertTrue(content["executable"])
+                if scope == "inventory":
+                    self.assertGreater(len(content["items"]), 0)
+
+    def fact_measurement(self, fact: dict) -> dict | None:
+        if fact["value"] is None:
+            return None
+        return {"value": fact["value"], "unit": fact["unit"]}
+
+    def assert_runtime_content_invariants(self, record: dict) -> None:
+        products = record["facts"]["products"]
+        for scope in ["accounting", "inventory"]:
+            content = record[f"{scope}_content"]
+            if content is None:
+                continue
+            indexes = [item["product_index"] for item in content["items"]]
+            self.assertEqual(len(indexes), len(set(indexes)))
+            for item in content["items"]:
+                product = products[item["product_index"]]
+                if scope == "accounting":
+                    self.assertEqual(item["full_name"], product["full_name"]["value"])
+                    self.assertEqual(item["specification"], product["specification"]["value"])
+                    self.assertEqual(item["quantity"], product["purchase_quantity"]["value"])
+                    self.assertEqual(item["quantity_unit"], product["quantity_unit"]["value"])
+                    self.assertEqual(
+                        item["nominal_weight_or_volume"],
+                        self.fact_measurement(product["nominal_weight_or_volume"]),
+                    )
+                    self.assertEqual(
+                        item["actual_weight_or_volume"],
+                        self.fact_measurement(product["actual_weight_or_volume"]),
+                    )
+                    self.assertEqual(
+                        item["weight_variance"],
+                        self.fact_measurement(product["weight_variance"]),
+                    )
+                    self.assertEqual(
+                        item["line_paid_amount"], product["line_paid_amount"]["value"]
+                    )
+                    self.assertEqual(item["refund_amount"], product["refund_amount"]["value"])
+                else:
+                    self.assertEqual(item["food_name"], product["full_name"]["value"])
+                    self.assertEqual(item["specification"], product["specification"]["value"])
+                    self.assertEqual(item["quantity"], product["purchase_quantity"]["value"])
+                    self.assertEqual(item["quantity_unit"], product["quantity_unit"]["value"])
+                    inventory_weight = product["actual_weight_or_volume"]
+                    if inventory_weight["value"] is None:
+                        inventory_weight = product["nominal_weight_or_volume"]
+                    self.assertEqual(
+                        item["weight_or_volume"], self.fact_measurement(inventory_weight)
+                    )
+                    self.assertEqual(
+                        item["production_date"], product["production_date"]["value"]
+                    )
 
     def test_every_shipped_v3_fixture_is_a_complete_draft_2020_12_instance(self) -> None:
         fixtures = sorted(FIXTURES.glob("*.v3.json"))
@@ -79,6 +161,7 @@ class RouterV3FixtureSchemaTests(unittest.TestCase):
         for name in [
             "durian-order.v3.json",
             "partial-nine-item-order.v3.json",
+            "partial-refined-nine-item-order.v3.json",
             "failed-recognition.v3.json",
         ]:
             with self.subTest(fixture=name):
@@ -333,6 +416,222 @@ class RouterV3FixtureSchemaTests(unittest.TestCase):
         refinement["issues"] = []
         self.assert_schema_valid(record)
 
+    def test_handoff_selected_scopes_require_executable_content(self) -> None:
+        handed_off = self.fixture("handed-off.v3.json")
+
+        accounting_only = copy.deepcopy(handed_off)
+        accounting_only["handoff"]["selected_scopes"] = ["accounting"]
+        accounting_only["inventory_content"] = None
+        self.assert_schema_valid(accounting_only)
+        self.assert_runtime_handoff_invariants(accounting_only)
+
+        inventory_only = copy.deepcopy(handed_off)
+        inventory_only["handoff"]["selected_scopes"] = ["inventory"]
+        inventory_only["accounting_content"] = None
+        self.assert_schema_valid(inventory_only)
+        self.assert_runtime_handoff_invariants(inventory_only)
+
+        invalid_records = {}
+
+        accounting_null = copy.deepcopy(handed_off)
+        accounting_null["handoff"]["selected_scopes"] = ["accounting"]
+        accounting_null["accounting_content"] = None
+        invalid_records["selected accounting is null"] = accounting_null
+
+        accounting_disabled = copy.deepcopy(handed_off)
+        accounting_disabled["handoff"]["selected_scopes"] = ["accounting"]
+        accounting_disabled["accounting_content"]["executable"] = False
+        invalid_records["selected accounting is non-executable"] = accounting_disabled
+
+        inventory_null = copy.deepcopy(handed_off)
+        inventory_null["handoff"]["selected_scopes"] = ["inventory"]
+        inventory_null["inventory_content"] = None
+        invalid_records["selected inventory is null"] = inventory_null
+
+        inventory_disabled = copy.deepcopy(handed_off)
+        inventory_disabled["handoff"]["selected_scopes"] = ["inventory"]
+        inventory_disabled["inventory_content"]["executable"] = False
+        invalid_records["selected inventory is non-executable"] = inventory_disabled
+
+        both_null = copy.deepcopy(handed_off)
+        both_null["accounting_content"] = None
+        both_null["inventory_content"] = None
+        invalid_records["both selected sections are null"] = both_null
+
+        empty_inventory = copy.deepcopy(handed_off)
+        empty_inventory["handoff"]["selected_scopes"] = ["inventory"]
+        empty_inventory["inventory_content"]["items"] = []
+        invalid_records["selected executable inventory is empty"] = empty_inventory
+
+        for name, record in invalid_records.items():
+            with self.subTest(mutation=name):
+                self.assert_schema_invalid(record)
+                with self.assertRaises(AssertionError):
+                    self.assert_runtime_handoff_invariants(record)
+
+    def test_successful_targeted_refinement_can_remain_aggregate_partial(self) -> None:
+        record = self.fixture("partial-refined-nine-item-order.v3.json")
+        run = record["recognition_run"]
+        self.assertEqual(run["status"], "partial")
+        self.assertEqual(run["pass_count"], 2)
+        self.assertEqual(run["refinement"]["status"], "succeeded")
+        self.assertIn("line_paid_amount", run["refinement"]["targeted_fields"])
+        self.assertGreater(len(run["refinement"]["reasons"]), 0)
+        self.assertGreater(len(run["refinement"]["targeted_fields"]), 0)
+        self.assertEqual(record["facts"]["order"]["hidden_item_kind_count"]["value"], 2)
+        self.assertFalse(record["facts"]["order"]["content_complete"]["value"])
+        self.assertIn("另有 2 种商品未展开", record["warnings"])
+        self.assertEqual(record["preview_state"], "awaiting_confirmation")
+        self.assertIsNone(record["handoff"])
+        self.assert_schema_valid(record)
+        self.assert_runtime_attachment_invariants(record)
+        self.assert_runtime_content_invariants(record)
+
+    def test_inventory_view_preserves_count_and_nominal_measurement_separately(self) -> None:
+        record = self.fixture("partial-nine-item-order.v3.json")
+        inventory = {
+            item["product_index"]: item for item in record["inventory_content"]["items"]
+        }
+        self.assertEqual(
+            (inventory[0]["quantity"], inventory[0]["quantity_unit"], inventory[0]["weight_or_volume"]),
+            (2, None, {"value": 850, "unit": "g"}),
+        )
+        self.assertEqual(
+            (inventory[1]["quantity"], inventory[1]["quantity_unit"], inventory[1]["weight_or_volume"]),
+            (1, None, {"value": 1.5, "unit": "L"}),
+        )
+        self.assertEqual(
+            (inventory[4]["quantity"], inventory[4]["quantity_unit"], inventory[4]["weight_or_volume"]),
+            (2, None, {"value": 1, "unit": "L"}),
+        )
+        self.assert_runtime_content_invariants(record)
+
+        for product_index, multiplied_total, invented_unit in [
+            (0, 1700, "g"),
+            (1, 1500, "ml"),
+            (4, 2000, "ml"),
+        ]:
+            with self.subTest(product_index=product_index):
+                invalid_view = copy.deepcopy(record)
+                item = invalid_view["inventory_content"]["items"][product_index]
+                item["quantity"] = multiplied_total
+                item["quantity_unit"] = invented_unit
+                item["weight_or_volume"] = None
+                self.assert_schema_valid(invalid_view)
+                with self.assertRaises(AssertionError):
+                    self.assert_runtime_content_invariants(invalid_view)
+
+    def test_every_fixture_content_view_maps_to_its_canonical_product(self) -> None:
+        for path in sorted(FIXTURES.glob("*.v3.json")):
+            with self.subTest(fixture=path.name):
+                record = json.loads(path.read_text(encoding="utf-8"))
+                self.assert_runtime_content_invariants(record)
+
+    def test_unknown_fact_wrappers_fail_closed_and_known_values_keep_evidence(self) -> None:
+        unknown = {
+            "textFact": {
+                "value": None,
+                "confidence": 0,
+                "calculated": False,
+                "evidence": [],
+            },
+            "amountFact": {
+                "value": None,
+                "currency": None,
+                "confidence": 0,
+                "calculated": False,
+                "evidence": [],
+            },
+            "quantityFact": {
+                "value": None,
+                "unit": None,
+                "confidence": 0,
+                "calculated": False,
+                "evidence": [],
+            },
+            "dateFact": {
+                "value": None,
+                "confidence": 0,
+                "calculated": False,
+                "evidence": [],
+            },
+            "booleanFact": {
+                "value": None,
+                "confidence": 0,
+                "calculated": False,
+                "evidence": [],
+            },
+            "countFact": {
+                "value": None,
+                "confidence": 0,
+                "calculated": False,
+                "evidence": [],
+            },
+        }
+        known = {
+            "textFact": {"value": "known", "confidence": 1, "calculated": False},
+            "amountFact": {
+                "value": 1,
+                "currency": "CNY",
+                "confidence": 1,
+                "calculated": False,
+            },
+            "quantityFact": {
+                "value": 1,
+                "unit": "kg",
+                "confidence": 1,
+                "calculated": False,
+            },
+            "dateFact": {"value": "2026-08-06", "confidence": 1, "calculated": False},
+            "booleanFact": {"value": True, "confidence": 1, "calculated": False},
+            "countFact": {"value": 1, "confidence": 1, "calculated": False},
+        }
+        evidence = [{"source": "visible_label", "value": "known"}]
+
+        for name, fact in unknown.items():
+            with self.subTest(wrapper=name, state="valid unknown"):
+                self.assert_definition_valid(name, fact)
+            for field, value in [
+                ("confidence", 0.5),
+                ("calculated", True),
+                ("evidence", evidence),
+            ]:
+                with self.subTest(wrapper=name, invalid_unknown=field):
+                    invalid = copy.deepcopy(fact)
+                    invalid[field] = value
+                    self.assert_definition_invalid(name, invalid)
+
+            with self.subTest(wrapper=name, state="known with evidence"):
+                valid_known = {**known[name], "evidence": evidence}
+                self.assert_definition_valid(name, valid_known)
+                invalid_known = copy.deepcopy(valid_known)
+                invalid_known["evidence"] = []
+                self.assert_definition_invalid(name, invalid_known)
+
+        invalid_amount = copy.deepcopy(unknown["amountFact"])
+        invalid_amount["currency"] = "CNY"
+        self.assert_definition_invalid("amountFact", invalid_amount)
+
+        invalid_quantity = copy.deepcopy(unknown["quantityFact"])
+        invalid_quantity["unit"] = "kg"
+        self.assert_definition_invalid("quantityFact", invalid_quantity)
+
+        item_fact = {
+            "item_name": {**known["textFact"], "evidence": evidence},
+            "quantity": {**known["quantityFact"], "evidence": evidence},
+            "specification": copy.deepcopy(unknown["textFact"]),
+            "line_status": {**known["textFact"], "evidence": evidence},
+            "item_type": "food",
+            "evidence": evidence,
+        }
+        self.assert_definition_valid("itemFact", item_fact)
+        invalid_item_fact = copy.deepcopy(item_fact)
+        invalid_item_fact["specification"]["confidence"] = 0.5
+        self.assert_definition_invalid("itemFact", invalid_item_fact)
+        invalid_item_evidence = copy.deepcopy(item_fact)
+        invalid_item_evidence["evidence"] = []
+        self.assert_definition_invalid("itemFact", invalid_item_evidence)
+
     def test_initial_preview_has_no_handoff_and_handed_off_is_singular(self) -> None:
         for name, recognition_status in [
             ("durian-order.v3.json", "succeeded"),
@@ -344,9 +643,12 @@ class RouterV3FixtureSchemaTests(unittest.TestCase):
                 self.assertEqual(record["preview_state"], "awaiting_confirmation")
                 self.assertIsNone(record["handoff"])
 
+        initial_preview = self.fixture("durian-order.v3.json")
         handed_off = self.fixture("handed-off.v3.json")
         self.assertEqual(handed_off["preview_state"], "handed_off")
         self.assertIsNotNone(handed_off["handoff"])
+        self.assertEqual(handed_off["preview_id"], initial_preview["preview_id"])
+        self.assertEqual(handed_off["handoff"]["preview_id"], initial_preview["preview_id"])
         self.assert_schema_valid(handed_off)
         self.assert_runtime_handoff_invariants(handed_off)
 
@@ -364,13 +666,41 @@ class RouterV3FixtureSchemaTests(unittest.TestCase):
 
         corrected_preview = self.fixture("corrected-preview.v3.json")
         self.assertEqual(corrected_preview["preview_state"], "awaiting_confirmation")
-        self.assertNotEqual(corrected_preview["preview_id"], handed_off["preview_id"])
+        self.assertNotEqual(corrected_preview["preview_id"], initial_preview["preview_id"])
         self.assertIsNone(corrected_preview["handoff"])
+        initial_fact = initial_preview["facts"]["products"][0]["actual_weight_or_volume"]
+        corrected_fact = corrected_preview["facts"]["products"][0][
+            "actual_weight_or_volume"
+        ]
+        self.assertNotEqual(corrected_fact, initial_fact)
+        self.assertEqual(corrected_fact["evidence"][0]["source"], "user_text")
+        self.assertEqual(
+            corrected_preview["accounting_content"]["items"][0][
+                "actual_weight_or_volume"
+            ],
+            {"value": corrected_fact["value"], "unit": corrected_fact["unit"]},
+        )
+        self.assertNotEqual(
+            corrected_preview["accounting_content"], initial_preview["accounting_content"]
+        )
+        self.assertEqual(
+            corrected_preview["inventory_content"]["items"][0]["weight_or_volume"],
+            {"value": corrected_fact["value"], "unit": corrected_fact["unit"]},
+        )
+        self.assertNotEqual(
+            corrected_preview["inventory_content"], initial_preview["inventory_content"]
+        )
         self.assert_schema_valid(corrected_preview)
+        self.assert_runtime_content_invariants(corrected_preview)
 
         duplicate_confirmation = self.fixture("duplicate-confirmation.v3.json")
+        self.assertEqual(duplicate_confirmation["preview_state"], "handed_off")
         self.assertEqual(duplicate_confirmation["preview_id"], handed_off["preview_id"])
         self.assertEqual(duplicate_confirmation["handoff"], handed_off["handoff"])
+        self.assertEqual(
+            duplicate_confirmation["handoff"]["selected_scopes"],
+            handed_off["handoff"]["selected_scopes"],
+        )
         self.assert_schema_valid(duplicate_confirmation)
         self.assert_runtime_handoff_invariants(duplicate_confirmation)
 

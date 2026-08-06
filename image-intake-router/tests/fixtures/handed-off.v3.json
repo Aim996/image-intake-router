@@ -1,6 +1,6 @@
 {
   "schema_version": "image-intake-router.v3",
-  "preview_id": "preview:durian:20260805:handed",
+  "preview_id": "preview:durian:20260805:001",
   "preview_state": "handed_off",
   "source": {
     "image_count": 1,
@@ -253,14 +253,14 @@
         },
         "actual_weight_or_volume": {
           "value": null,
-          "unit": "kg",
+          "unit": null,
           "confidence": 0.0,
           "calculated": false,
           "evidence": []
         },
         "billing_weight": {
           "value": null,
-          "unit": "kg",
+          "unit": null,
           "confidence": 0.0,
           "calculated": false,
           "evidence": []
@@ -279,14 +279,14 @@
         },
         "original_amount": {
           "value": null,
-          "currency": "CNY",
+          "currency": null,
           "confidence": 0.0,
           "calculated": false,
           "evidence": []
         },
         "unit_price": {
           "value": null,
-          "currency": "CNY",
+          "currency": null,
           "confidence": 0.0,
           "calculated": false,
           "evidence": []
@@ -407,7 +407,7 @@
     "\u5b9e\u9645\u66f4\u6b63\u91cd\u91cf\u4e0d\u53ef\u89c1\u3002"
   ],
   "handoff": {
-    "preview_id": "preview:durian:20260805:handed",
+    "preview_id": "preview:durian:20260805:001",
     "selected_scopes": [
       "accounting",
       "inventory"

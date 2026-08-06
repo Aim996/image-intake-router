@@ -1,6 +1,6 @@
 {
   "schema_version": "image-intake-router.v3",
-  "preview_id": "preview:partial-nine:20260805:001",
+  "preview_id": "preview:partial-nine:20260805:refined",
   "preview_state": "awaiting_confirmation",
   "source": {
     "image_count": 1,
@@ -24,12 +24,18 @@
     "issues": [
       "two item kinds are not expanded"
     ],
-    "pass_count": 1,
+    "pass_count": 2,
     "refinement": {
-      "status": "not_needed",
-      "reasons": [],
-      "targeted_fields": [],
-      "attachment_indexes": [],
+      "status": "succeeded",
+      "reasons": [
+        "visible line amount omitted on initial pass"
+      ],
+      "targeted_fields": [
+        "line_paid_amount"
+      ],
+      "attachment_indexes": [
+        0
+      ],
       "issues": []
     }
   },

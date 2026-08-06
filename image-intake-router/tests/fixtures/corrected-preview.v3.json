@@ -4,7 +4,7 @@
   "preview_state": "awaiting_confirmation",
   "source": {
     "image_count": 1,
-    "has_user_text": false
+    "has_user_text": true
   },
   "recognition_run": {
     "status": "succeeded",
@@ -40,7 +40,7 @@
       ]
     }
   },
-  "cleaned_text": "\u91d1\u6795\u69b4\u83b2 \u7ea62.1kg \u00d7 1\u7c92\uff0c\u5b9e\u4ed8\u00a5119.00\uff0c\u91cd\u91cf\u8bef\u5dee 228g\uff0c\u9000\u6b3e\u00a512.92\u3002",
+  "cleaned_text": "\u91d1\u6795\u69b4\u83b2 \u7ea62.1kg \u00d7 1\u7c92\uff0c\u7528\u6237\u66f4\u6b63\u5b9e\u9645\u91cd\u91cf 1.872kg\uff0c\u5b9e\u4ed8\u00a5119.00\uff0c\u9000\u6b3e\u00a512.92\u3002",
   "facts": {
     "order": {
       "merchant": {
@@ -252,15 +252,20 @@
           ]
         },
         "actual_weight_or_volume": {
-          "value": null,
+          "value": 1.872,
           "unit": "kg",
-          "confidence": 0.0,
+          "confidence": 1.0,
           "calculated": false,
-          "evidence": []
+          "evidence": [
+            {
+              "source": "user_text",
+              "value": "1.872kg"
+            }
+          ]
         },
         "billing_weight": {
           "value": null,
-          "unit": "kg",
+          "unit": null,
           "confidence": 0.0,
           "calculated": false,
           "evidence": []
@@ -279,14 +284,14 @@
         },
         "original_amount": {
           "value": null,
-          "currency": "CNY",
+          "currency": null,
           "confidence": 0.0,
           "calculated": false,
           "evidence": []
         },
         "unit_price": {
           "value": null,
-          "currency": "CNY",
+          "currency": null,
           "confidence": 0.0,
           "calculated": false,
           "evidence": []
@@ -373,7 +378,10 @@
           "value": 2.1,
           "unit": "kg"
         },
-        "actual_weight_or_volume": null,
+        "actual_weight_or_volume": {
+          "value": 1.872,
+          "unit": "kg"
+        },
         "weight_variance": {
           "value": 228,
           "unit": "g"
@@ -394,7 +402,7 @@
         "quantity_unit": "\u7c92",
         "specification": "\u7ea62.1kg \u00d7 1\u7c92",
         "weight_or_volume": {
-          "value": 2.1,
+          "value": 1.872,
           "unit": "kg"
         },
         "production_date": null
@@ -403,8 +411,6 @@
     "excluded_items": [],
     "issues": []
   },
-  "warnings": [
-    "\u5b9e\u9645\u66f4\u6b63\u91cd\u91cf\u4e0d\u53ef\u89c1\u3002"
-  ],
+  "warnings": [],
   "handoff": null
 }
