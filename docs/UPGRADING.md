@@ -3,7 +3,7 @@
 ## 安全更新
 
 1. 记录当前版本，备份 OpenClaw 配置，并保留已验证的 v2.0.1 Skill 目录和 [v2.0.1 Release](https://github.com/Aim996/image-intake-router/releases/tag/v2.0.1) 资产。
-2. 下载固定的 2.1.0 归档和 SHA-256 文件，按 [安装指南](INSTALL.md) 校验并安装到新的并行目录。
+2. 直接复制执行 [安装指南](INSTALL.md) 中对应系统的 GitHub Release 命令：它会下载固定的 `v2.1.0` 资产、校验 SHA-256、解压真正的 Skill 目录，并运行 `openclaw skills install ... --global --as image-intake-router` 刷新已安装副本。不要改成 `main`、`latest` 或未经校验的地址。
 3. 配置真实图片能力和 `tools.media.image.attachments.mode: "all"`，确保 `maxAttachments` 覆盖你的订单图片数量；不要在 `tools.media.models[]` 内联 API key。
 4. 只启用 `image-intake-router`，停用会造成重复识别的旧入口，重载后完成完整业务级 UAT。
 
