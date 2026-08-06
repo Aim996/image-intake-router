@@ -9,6 +9,7 @@ SKILL_ROOT = VERSION_ROOT / "image-intake-router"
 SKILL = SKILL_ROOT / "SKILL.md"
 REFERENCES = SKILL_ROOT / "references"
 SCHEMA = SKILL_ROOT / "templates" / "image-intake-router.schema.json"
+EVALS = SKILL_ROOT / "tests" / "skill-evals"
 
 EXPECTED_REFERENCES = {
     "references/calculation-rules.md",
@@ -123,6 +124,23 @@ class ProductContractTests(unittest.TestCase):
         for removed in ["projection-contracts.md", "failure-recovery.md"]:
             self.assertNotIn(f"references/{removed}", targets)
             self.assertFalse((REFERENCES / removed).exists(), removed)
+
+    def test_v31_evaluation_corpus_covers_compact_preview_pressure(self) -> None:
+        required = [
+            EVALS / "v3.1-baseline.md",
+            EVALS / "v3.1-green.md",
+            EVALS / "v3.1-pressure-scenarios.md",
+        ]
+        self.assertEqual([path.name for path in required if not path.is_file()], [])
+        combined = "\n".join(self.read(path) for path in required)
+        for phrase in [
+            "display_name",
+            "production_date",
+            "zero handoffs",
+            "partial refund",
+            "以上 9 种食品均入库",
+        ]:
+            self.assertIn(phrase, combined)
 
 
 class RouterV31ProtocolContractTests(unittest.TestCase):

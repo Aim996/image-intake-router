@@ -48,13 +48,13 @@ Tool notation: `E` is one allowed `expense_entry.create`; `D(item)` is one allow
 
 ### C05 — cancelled, refunded, unavailable, and uncertain rows
 
-**Input facts.** A described paid order contains rice 1 kg explicitly `purchased_and_received`, yoghurt cancelled, tofu refunded, bananas out of stock, and an unreadable item whose quantity is unknown. It has one unique paid total. Facts are `user_text`.
+**Input facts.** A described paid order contains rice 1 kg explicitly `purchased_and_received`, yoghurt cancelled, tofu fully refunded and not received, bananas out of stock, milk partially refunded but received, and an unreadable item whose quantity is unknown. It has one unique paid total. Facts are `user_text`.
 
-**Expected complete preview.** Expense note retains the recognised purchased product names subject to the ledger note rule, with one expense only. Pantry proposes rice only; yoghurt, tofu, and bananas are separately excluded with their statuses and reasons; the unreadable item is uncertain and requests the specific missing name/quantity clarification. It asks for confirmation.
+**Expected complete preview.** Accounting keeps the one final paid amount and concise rows for rice and received milk without any refund amount. Inventory proposes rice and milk; yoghurt, tofu, and bananas are excluded by business status, while the unreadable item requests the specific missing name/quantity clarification. It asks for confirmation once.
 
-**Allowed trace.** Before confirmation `[]`; after confirmation `[E, D(rice)]`.
+**Allowed trace.** Before confirmation `[]`; after confirmation `[accounting, inventory(rice), inventory(milk)]`.
 
-**Forbidden.** Adding cancelled, refunded, unavailable, or uncertain rows to pantry; silently dropping their explanation; treating a refund as a new expense/refund write.
+**Forbidden.** Adding cancelled, fully refunded/not-received, unavailable, or uncertain rows to inventory; excluding the received milk merely because a partial refund exists; exposing or writing a refund amount; silently guessing the unreadable row.
 
 ### C06 — conflicting paid totals
 
@@ -156,15 +156,15 @@ Tool notation: `E` is one allowed `expense_entry.create`; `D(item)` is one allow
 
 **Forbidden.** Treating attachment presence alone as recognition; launching another recognition run from either projection; a business write before confirmation.
 
-### C16 — durian short-weight and refund facts remain separate
+### C16 — durian refund text is transient validity input
 
 **Input facts.** A successful `recognition_run` on one live order image identifies final paid amount `RMB 119.00`, durian `about 2.1 kg × 1` marked `purchased_and_received`, a `228 g` short-weight variance, and refund `RMB 12.92`.
 
-**Expected complete preview.** The expense projection uses RMB 119.00 as the unique paid amount. Durian remains one food fact with its about-2.1-kg quantity and receipt status. The 228 g variance and RMB 12.92 refund remain separately traceable auxiliary/order facts; they do not replace the paid amount, create a refund ledger write, or silently alter the pantry quantity.
+**Expected complete preview.** Accounting uses RMB 119.00 as the unique final paid amount and displays `榴莲 约2.1kg×1 ¥119.00`. Inventory includes the received durian. The short-weight/refund text is used only to confirm that the row remains received after a partial refund; neither value enters facts, preview, or handoff.
 
-**Allowed trace.** Before confirmation `[]`; after all-domain confirmation `[E, D(durian-about-2.1kg-x1)]`.
+**Allowed trace.** Before confirmation `[]`; after all-scope confirmation `[accounting, inventory(durian-about-2.1kg-x1)]`.
 
-**Forbidden.** Netting RMB 12.92 against RMB 119.00; interpreting the 228 g variance as a new product row; inventing a precise corrected pantry mass; a refund business write.
+**Forbidden.** Netting RMB 12.92 against RMB 119.00; persisting or displaying the 228 g/12.92 values; interpreting the variance as a product row; inventing a corrected mass; a refund business write.
 
 ### C17 — seven visible products plus two collapsed products
 
