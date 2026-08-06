@@ -68,7 +68,7 @@ Each evaluation used a fresh, read-only evaluator. The evaluator received only t
 
 ## P04
 
-- Evaluator task identity: `/root/task1_red_evidence/eval_p04`
+- Evaluator task identity: `/root/task1_red_evidence/eval_p04_fix1`
 - Supplied materials:
   - `image-intake-router/SKILL.md`
   - `image-intake-router/references/recognition-rules.md`
@@ -79,11 +79,13 @@ Each evaluation used a fresh, read-only evaluator. The evaluator received only t
   - `image-intake-router/references/failure-recovery.md`
   - `image-intake-router/references/output-contract.md`
   - Scenario P04 from `image-intake-router/tests/skill-evals/v3-pressure-scenarios.md`
-- Result: PASS
+- Result: FAIL
 - Verbatim output: |
-    The Skill can satisfy P04. A partial recognition run is explicitly usable when every attachment entered visual capability and has only `succeeded` or `partial` status; it must record the limitation and route only explicit supported facts. The required seven-visible/two-hidden case is specified directly: record declared 9, recognized 7, hidden 2, mark the content incomplete, and do not manufacture placeholder rows for the hidden products.
+    P04 is not fully satisfied. The v2.1 materials do require the correct partial-content behavior: a seven-visible/two-hidden order is recorded as declared 9, recognized/visible 7, hidden 2, with incomplete detail; no hidden-product placeholder rows are manufactured; hidden rows never enter the pantry payload; and the “Visible completeness” rule says that only seven product rows proceed downstream. The preview must retain the completeness warning and say only visible rows were forwarded, so the reliable seven are not blocked merely because two are unexpanded.
 
-    The downstream requirements are also explicit. The visible-completeness rule requires “seven visible + two hidden” to yield only seven downstream product rows; expense structured `line_items` retain the visible detail without note truncation deleting rows, and the diet contract states that hidden rows never enter `items`. Thus a later `确认`, which maps to all executable scopes, can execute the reliable visible subset without guessing or withholding it merely because the other two products are unexpanded. The required preview must disclose the visible/hidden completeness summary and say that only visible rows will be forwarded.
+    They also require confirmation idempotency for direct execution. A later `确认` confirms the latest business digest, the preview moves atomically through `executing` to `consumed`, and a repeated confirmation of either state returns the known safe receipt/state with zero new writes. Thus the contract prevents a second direct expense/pantry execution.
 
-    Finally, the lifecycle requires atomically moving the confirmed preview from `awaiting_confirmation` to `executing`, then to `consumed`; a repeated confirmation in either `executing` or `consumed` returns the known receipt/state and makes zero new writes. The session-local operation ledger further prohibits replay of written operations.
-- Observed gap: No visible-only or duplicate-confirmation gap was observed; P04 passes under the current direct downstream-execution model, which is outside P04’s stated success criterion.
+    However, P04 expressly defines “handoff” as returning the confirmed accounting and inventory content to OpenClaw for orchestration, and v2.1 does not specify such a return handoff. Instead, it explicitly requires direct downstream execution: the finalized ledger-public projection is “forwarded intact to `expense_entry.create`”; diet `items` are final strict `diet_pantry(action="add")` payloads; and “Independent execution” says to execute the selected expense scope and each eligible pantry item independently with public payloads. The receipt reports downstream committed outcomes. Direct router calls to those adapters are not the stipulated return of confirmed content to OpenClaw for orchestration.
+
+    Therefore, although visible-only routing and repeat-confirmation idempotency are covered, the scenario’s essential “router hands off” requirement is unmet, so the unchanged v2.1 materials fail P04.
+- Observed gap: The v2.1 router directly executes expense and pantry adapters after confirmation instead of handing the seven reliable accounting and inventory products back to OpenClaw for orchestration.
