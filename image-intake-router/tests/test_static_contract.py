@@ -142,6 +142,28 @@ class ProductContractTests(unittest.TestCase):
         ]:
             self.assertIn(phrase, combined)
 
+    def test_current_behavior_matrix_is_v31_handoff_only(self) -> None:
+        matrix = self.read(SKILL_ROOT / "tests" / "test-cases.md")
+        for phrase in [
+            "Image Intake Router v3.1 behavior matrix",
+            "zero handoffs",
+            "OpenClaw owns downstream dispatch",
+            "final_paid_amount: 0.00",
+            "production_date",
+            "fully_refunded",
+            "partial refund",
+        ]:
+            self.assertIn(phrase, matrix)
+        for obsolete in [
+            "expense_entry.create",
+            "diet_pantry.add",
+            "current zoned session time",
+            "adapter-only unit and expiry repair",
+            "quantity: 2100",
+            'unit: "g"',
+        ]:
+            self.assertNotIn(obsolete, matrix)
+
 
 class RouterV31ProtocolContractTests(unittest.TestCase):
     def read(self, path: Path) -> str:
@@ -202,6 +224,22 @@ class RouterV31ProtocolContractTests(unittest.TestCase):
         self.assertIn("display_name", inventory_item["required"])
         self.assertIn("production_date", inventory_item["properties"])
         self.assertNotIn("food_name", inventory_item["properties"])
+        self.assertEqual(
+            product["properties"]["production_date"]["$ref"],
+            "#/$defs/productionDateFact",
+        )
+        self.assertEqual(
+            product["properties"]["line_status"]["$ref"],
+            "#/$defs/lineStatusFact",
+        )
+        self.assertEqual(
+            product["properties"]["item_type"]["$ref"],
+            "#/$defs/itemTypeFact",
+        )
+        self.assertEqual(
+            product["properties"]["visibility_status"]["$ref"],
+            "#/$defs/visibilityStatusFact",
+        )
 
     def test_recognition_run_caps_targeted_refinement_at_two_passes(self) -> None:
         defs = json.loads(self.read(SCHEMA))["$defs"]

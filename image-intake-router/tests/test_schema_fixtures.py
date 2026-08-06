@@ -114,7 +114,22 @@ class RouterV31FixtureSchemaTests(unittest.TestCase):
             self.assertEqual(len(indexes), len(set(indexes)))
             for item in content["items"]:
                 product = products[item["product_index"]]
+                self.assertEqual(
+                    product["line_status"]["value"],
+                    "purchased_and_received",
+                    f"{scope} contains an ineligible product status",
+                )
+                self.assertEqual(
+                    product["visibility_status"]["value"],
+                    "visible",
+                    f"{scope} contains a non-visible product row",
+                )
                 if scope == "accounting":
+                    self.assertIn(
+                        product["item_type"]["value"],
+                        {"food", "non_food"},
+                        "accounting contains a fee, discount, advertisement, or unknown row",
+                    )
                     self.assertIn("display_name", item)
                     self.assertIn("display_name", product)
                     self.assertEqual(
@@ -135,6 +150,11 @@ class RouterV31FixtureSchemaTests(unittest.TestCase):
                         item["line_paid_amount"], product["line_paid_amount"]["value"]
                     )
                 else:
+                    self.assertEqual(
+                        product["item_type"]["value"],
+                        "food",
+                        "inventory contains a non-food row",
+                    )
                     self.assertIn("display_name", item)
                     self.assertIn("display_name", product)
                     self.assertEqual(
@@ -288,6 +308,63 @@ class RouterV31FixtureSchemaTests(unittest.TestCase):
         rendered = json.dumps(record, ensure_ascii=False)
         for forbidden_text in ["赠品", "免费", "会员", "原价", "优惠", "退款", "短重"]:
             self.assertNotIn(forbidden_text, rendered)
+
+    def test_executable_accounting_accepts_real_zero_final_payment(self) -> None:
+        record = self.fixture("compact-nine-item-order.v3.1.json")
+        record["facts"]["order"]["final_paid_amount"]["value"] = 0.00
+        record["facts"]["order"]["final_paid_amount"]["evidence"][0]["value"] = (
+            "实付 ¥0.00"
+        )
+        record["accounting_content"]["final_paid_amount"] = 0.00
+        self.assert_schema_valid(record)
+
+    def test_runtime_content_rejects_ineligible_product_rows(self) -> None:
+        baseline = self.fixture("compact-nine-item-order.v3.1.json")
+        mutations = {
+            "fully refunded": ("line_status", "fully_refunded"),
+            "cancelled": ("line_status", "cancelled"),
+            "unavailable": ("line_status", "unavailable"),
+            "not received": ("line_status", "not_received"),
+            "fee row": ("item_type", "fee_or_service"),
+            "hidden row": ("visibility_status", "hidden"),
+        }
+        for name, (field, value) in mutations.items():
+            with self.subTest(status=name):
+                record = copy.deepcopy(baseline)
+                record["facts"]["products"][0][field]["value"] = value
+                with self.assertRaises(AssertionError):
+                    self.assert_runtime_content_invariants(record)
+
+        non_food = copy.deepcopy(baseline)
+        non_food["facts"]["products"][0]["item_type"]["value"] = "non_food"
+        with self.assertRaises(AssertionError):
+            self.assert_runtime_content_invariants(non_food)
+
+    def test_received_product_remains_eligible_after_partial_refund_classification(self) -> None:
+        record = self.fixture("durian-order.v3.1.json")
+        self.assertEqual(
+            record["facts"]["products"][0]["line_status"]["value"],
+            "purchased_and_received",
+        )
+        self.assert_runtime_content_invariants(record)
+
+    def test_production_date_requires_visible_uncalculated_provenance(self) -> None:
+        baseline = self.fixture("compact-nine-item-order.v3.1.json")
+        product_index = 1
+
+        calculated = copy.deepcopy(baseline)
+        calculated["facts"]["products"][product_index]["production_date"][
+            "calculated"
+        ] = True
+        self.assert_schema_invalid(calculated)
+
+        for source in ["calculated", "reference_database", "visual_estimate", "user_text"]:
+            with self.subTest(source=source):
+                record = copy.deepcopy(baseline)
+                record["facts"]["products"][product_index]["production_date"][
+                    "evidence"
+                ][0]["source"] = source
+                self.assert_schema_invalid(record)
 
     def test_hidden_items_warn_without_triggering_refinement(self) -> None:
         record = self.fixture("partial-nine-item-order.v3.1.json")

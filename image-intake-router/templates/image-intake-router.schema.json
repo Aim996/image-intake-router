@@ -501,6 +501,86 @@
         }
       ]
     },
+    "productionDateFact": {
+      "allOf": [
+        { "$ref": "#/$defs/dateFact" },
+        {
+          "if": {
+            "properties": { "value": { "type": "string" } },
+            "required": ["value"]
+          },
+          "then": {
+            "properties": {
+              "calculated": { "const": false },
+              "evidence": {
+                "type": "array",
+                "items": {
+                  "allOf": [
+                    { "$ref": "#/$defs/evidenceRecord" },
+                    { "properties": { "source": { "const": "visible_label" } } }
+                  ]
+                },
+                "minItems": 1,
+                "maxItems": 20
+              }
+            }
+          }
+        }
+      ]
+    },
+    "lineStatusFact": {
+      "allOf": [
+        { "$ref": "#/$defs/textFact" },
+        {
+          "properties": {
+            "value": {
+              "enum": [
+                "purchased_and_received",
+                "purchased_pending_delivery",
+                "fully_refunded",
+                "cancelled",
+                "unavailable",
+                "not_received",
+                "unknown",
+                null
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "itemTypeFact": {
+      "allOf": [
+        { "$ref": "#/$defs/textFact" },
+        {
+          "properties": {
+            "value": {
+              "enum": [
+                "food",
+                "non_food",
+                "fee_or_service",
+                "discount",
+                "advertisement",
+                "unknown",
+                null
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "visibilityStatusFact": {
+      "allOf": [
+        { "$ref": "#/$defs/textFact" },
+        {
+          "properties": {
+            "value": {
+              "enum": ["visible", "partial", "hidden", "unknown", null]
+            }
+          }
+        }
+      ]
+    },
     "booleanFact": {
       "type": "object",
       "additionalProperties": false,
@@ -636,10 +716,10 @@
         "actual_weight_or_volume": { "$ref": "#/$defs/quantityFact" },
         "billing_weight": { "$ref": "#/$defs/quantityFact" },
         "line_paid_amount": { "$ref": "#/$defs/amountFact" },
-        "production_date": { "$ref": "#/$defs/dateFact" },
-        "line_status": { "$ref": "#/$defs/textFact" },
-        "item_type": { "$ref": "#/$defs/textFact" },
-        "visibility_status": { "$ref": "#/$defs/textFact" }
+        "production_date": { "$ref": "#/$defs/productionDateFact" },
+        "line_status": { "$ref": "#/$defs/lineStatusFact" },
+        "item_type": { "$ref": "#/$defs/itemTypeFact" },
+        "visibility_status": { "$ref": "#/$defs/visibilityStatusFact" }
       }
     },
     "facts": {
@@ -695,7 +775,7 @@
         "final_paid_amount": { "type": ["number", "null"], "minimum": 0, "maximum": 9999999999.99 },
         "items": {
           "type": "array",
-          "description": "Runtime validation requires each product_index to be unique within this array.",
+          "description": "Runtime validation requires each product_index to be unique and to reference a visible purchased_and_received food or non-food product; fees, discounts, advertisements, unknown, cancelled, fully refunded, unavailable, pending, and not-received rows are ineligible.",
           "items": { "$ref": "#/$defs/accountingItem" },
           "maxItems": 100,
           "uniqueItems": true
@@ -705,7 +785,7 @@
       "allOf": [
         {
           "if": { "properties": { "executable": { "const": true } }, "required": ["executable"] },
-          "then": { "properties": { "final_paid_amount": { "type": "number", "exclusiveMinimum": 0, "maximum": 9999999999.99 } } }
+          "then": { "properties": { "final_paid_amount": { "type": "number", "minimum": 0, "maximum": 9999999999.99 } } }
         }
       ]
     },
@@ -741,7 +821,7 @@
         "executable": { "type": "boolean" },
         "items": {
           "type": "array",
-          "description": "Runtime validation requires each product_index to be unique within this array.",
+          "description": "Runtime validation requires each product_index to be unique and to reference a visible purchased_and_received food product; non-food, fees, discounts, advertisements, unknown, cancelled, fully refunded, unavailable, pending, and not-received rows are ineligible.",
           "items": { "$ref": "#/$defs/inventoryItem" },
           "maxItems": 100,
           "uniqueItems": true
