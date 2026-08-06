@@ -26,6 +26,10 @@ For OpenClaw media behavior, see the official [media-understanding guide](https:
 
 The router does not store original images, paths, base64, full OCR, credentials, or local business databases. It routes confirmed public facts to downstream Skills; those Skills own their own local data. Unsupported business cases include income, balances, transfers, loans, investments, assets, guessed hidden products, and writing anything from a visual run that is absent or incomplete.
 
+## Integrating other software
+
+The router publishes facts and an adapter contract; it does not take ownership of a downstream repository, API, or database. Downstream maintainers implement the adapter in their own project or in a separate integration project. See the Chinese [external software adapter contract](适配接口规范.md) for capability discovery, preflight, one-confirmation execution, idempotency, status recovery, versioning, and the explicit ownership boundary.
+
 ## Development checks
 
 ```powershell
